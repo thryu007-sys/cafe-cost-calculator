@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>☕ 카페 원가계산기 - 1잔 진짜 원가 계산</title>
+  <meta name="description" content="실제 카페 사장님을 위한 1잔 실질 원가, 이익률, 배분비용 계산 웹앱">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=5.0">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) { registration.unregister(); }
+      });
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    
+    <!-- Top Bar Header -->
+    <header class="pos-header">
+      <div class="pos-header-inner">
+        <div class="brand-title">
+          <span class="icon">☕</span>
+          <div>
+            <h1>카페 원가계산기</h1>
+            <p class="subtitle">내 메뉴의 진짜 원가를 1분 안에 계산하세요.</p>
+          </div>
+        </div>
+        <div class="top-nav-buttons">
+          <button type="button" id="open-saved-menus-btn" class="nav-btn">📁 저장된 메뉴</button>
+          <button type="button" id="open-settings-btn" class="nav-btn">⚙️ 백업/설정</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main POS Form Canvas -->
+    <main class="pos-container">
+
+      <!-- Action Toolbar -->
+      <div class="top-toolbar">
+        <button type="button" id="btn-load-test-data" class="tool-btn highlight">🧪 아메리카노 표준 테스트 불러오기</button>
+        <button type="button" id="btn-reset-form" class="tool-btn">🔄 입력 초기화</button>
+      </div>
+
+      <!-- ① 메뉴명 (Menu Name) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">①</span>
+          <h2>메뉴명</h2>
+        </div>
+        <div class="form-row">
+          <input type="text" id="input-menu-name" class="pos-input text-input-lg" placeholder="예: 아메리카노, 카페라떼" value="" autocomplete="off">
+        </div>
+      </section>
+
+      <!-- ② 음료 온도 (HOT / ICE) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">②</span>
+          <h2>음료 온도</h2>
+        </div>
+        <div class="toggle-group-2">
+          <button type="button" id="btn-temp-hot" class="pos-toggle-btn temp-btn active" data-temp="HOT">
+            🔥 HOT
+          </button>
+          <button type="button" id="btn-temp-ice" class="pos-toggle-btn temp-btn" data-temp="ICE">
+            ❄ ICE
+          </button>
+        </div>
+      </section>
+
+      <!-- ③ 이용 형태 (매장 / 테이크아웃) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">③</span>
+          <h2>이용 형태</h2>
+        </div>
+        <div class="toggle-group-2">
+          <button type="button" id="btn-service-store" class="pos-toggle-btn service-btn active" data-service="STORE">
+            🏠 매장
+          </button>
+          <button type="button" id="btn-service-takeout" class="pos-toggle-btn service-btn" data-service="TAKEOUT">
+            🛍 테이크아웃
+          </button>
+        </div>
+      </section>
+
+      <!-- ④ 자동 포장재 (Auto Packaging) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">④</span>
+          <h2>자동 포장재 적용 및 가격 설정</h2>
+          <span class="step-badge-cost" id="pack-total-badge">0원</span>
+        </div>
+
+        <div class="auto-rule-indicator" id="auto-rule-indicator">
+          <span>선택 조건: <strong>[매장 + HOT]</strong> &rarr; 자동 적용 항목: <strong>없음 (0원)</strong></span>
+        </div>
+
+        <div class="pack-items-table">
+          <div class="pack-table-header">
+            <span>포장재 항목</span>
+            <span>적용 여부</span>
+            <span>구입 가격 (원)</span>
+            <span>구입 수량 (개)</span>
+            <span>1개당 단가</span>
+          </div>
+
+          <!-- Cup -->
+          <div class="pack-table-row off" id="row-pack-cup">
+            <span class="item-name">🥤 컵</span>
+            <span class="applied-status status-off" id="status-pack-cup">제외</span>
+            <input type="text" inputmode="numeric" class="pos-input pack-price-input" data-key="cup" value="48,900">
+            <input type="text" inputmode="numeric" class="pos-input pack-qty-input" data-key="cup" value="1,000">
+            <span class="unit-calc" id="unit-cost-cup">48.9원</span>
+          </div>
+
+          <!-- Lid -->
+          <div class="pack-table-row" id="row-pack-lid">
+            <span class="item-name">⭕ 뚜껑</span>
+            <span class="applied-status status-off" id="status-pack-lid">제외</span>
+            <input type="text" inputmode="numeric" class="pos-input pack-price-input" data-key="lid" value="5,000">
+            <input type="text" inputmode="numeric" class="pos-input pack-qty-input" data-key="lid" value="100">
+            <span class="unit-calc" id="unit-cost-lid">50원</span>
+          </div>
+
+          <!-- Sleeve -->
+          <div class="pack-table-row" id="row-pack-sleeve">
+            <span class="item-name">🏷️ 컵홀더</span>
+            <span class="applied-status status-off" id="status-pack-sleeve">제외</span>
+            <input type="text" inputmode="numeric" class="pos-input pack-price-input" data-key="sleeve" value="3,000">
+            <input type="text" inputmode="numeric" class="pos-input pack-qty-input" data-key="sleeve" value="100">
+            <span class="unit-calc" id="unit-cost-sleeve">30원</span>
+          </div>
+
+          <!-- Straw -->
+          <div class="pack-table-row" id="row-pack-straw">
+            <span class="item-name">🥤 빨대</span>
+            <span class="applied-status status-off" id="status-pack-straw">제외</span>
+            <input type="text" inputmode="numeric" class="pos-input pack-price-input" data-key="straw" value="2,000">
+            <input type="text" inputmode="numeric" class="pos-input pack-qty-input" data-key="straw" value="100">
+            <span class="unit-calc" id="unit-cost-straw">20원</span>
+          </div>
+
+          <!-- Carrier -->
+          <div class="pack-table-row" id="row-pack-carrier">
+            <span class="item-name">🛍️ 캐리어</span>
+            <span class="applied-status status-off" id="status-pack-carrier">제외</span>
+            <input type="text" inputmode="numeric" class="pos-input pack-price-input" data-key="carrier" value="5,000">
+            <input type="text" inputmode="numeric" class="pos-input pack-qty-input" data-key="carrier" value="100">
+            <span class="unit-calc" id="unit-cost-carrier">50원</span>
+          </div>
+        </div>
+
+        <div class="section-total-bar">
+          <span>포장·소모품비 1잔 합계:</span>
+          <strong id="pack-total-text">0원</strong>
+        </div>
+      </section>
+
+      <!-- ⑤ 음료 재료 (Beverage Ingredients Input) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">⑤</span>
+          <h2>음료 재료 입력</h2>
+          <button type="button" id="btn-add-ingredient" class="btn-action-sm">+ 재료 추가</button>
+        </div>
+
+        <p class="section-hint-text">원두, 우유, 시럽 등 1잔에 들어가는 모든 재료를 추가하세요.</p>
+
+        <div id="ingredients-list-container" class="ing-list-container">
+          <!-- Dynamic Ingredient Rows inserted here -->
+        </div>
+
+        <div class="section-total-bar">
+          <span>음료 순수 재료비 1잔 합계:</span>
+          <strong id="ing-total-text">0원</strong>
+        </div>
+      </section>
+
+      <!-- ⑥ 기타 변동비 (Variable Costs) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">⑥</span>
+          <h2>기타 변동비 (수수료)</h2>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-field">
+            <label for="input-card-fee">카드 결제 수수료율 (%)</label>
+            <div class="input-with-unit">
+              <input type="text" inputmode="decimal" id="input-card-fee" class="pos-input" value="1.5">
+              <span class="unit-tag">%</span>
+            </div>
+            <span class="field-calc-hint" id="hint-card-fee">예상 수수료: 68원</span>
+          </div>
+
+          <div class="form-field">
+            <label for="input-delivery-fee">배달 플랫폼 수수료율 (%)</label>
+            <div class="input-with-unit">
+              <input type="text" inputmode="decimal" id="input-delivery-fee" class="pos-input" value="0.0">
+              <span class="unit-tag">%</span>
+            </div>
+            <span class="field-calc-hint" id="hint-delivery-fee">예상 수수료: 0원</span>
+          </div>
+        </div>
+
+        <div class="form-field mt-3">
+          <label for="input-extra-variable">기타 1잔당 변동비 (원)</label>
+          <div class="input-with-unit">
+            <input type="text" inputmode="numeric" id="input-extra-variable" class="pos-input" value="0">
+            <span class="unit-tag">원</span>
+          </div>
+          <span class="field-calc-hint">예: 프로모션 쿠폰, 판매 건당 기타 스티커 비용</span>
+        </div>
+
+        <div class="section-total-bar mt-3">
+          <span>1잔 변동비 합계:</span>
+          <strong id="variable-total-text">68원</strong>
+        </div>
+      </section>
+
+      <!-- ⑦ 고정비 및 인건비 (Monthly Fixed & Labor Costs Management) -->
+      <section class="pos-card">
+        <div class="card-step-header">
+          <span class="step-num">⑦</span>
+          <h2>월 고정비 및 인건비 관리</h2>
+        </div>
+
+        <div class="grid-2-col mt-3">
+          <!-- Monthly Fixed Costs -->
+          <div class="overhead-sub-box">
+            <div class="sub-box-title">
+              <span>🏢 월 매장 고정비</span>
+            </div>
+
+            <div class="form-field">
+              <label>임대료</label>
+              <input type="text" inputmode="numeric" class="pos-input fixed-cost-input" data-key="rent" value="700,000">
+            </div>
+            <div class="form-field">
+              <label>관리비 & 공과금 (전기/수도/가스)</label>
+              <input type="text" inputmode="numeric" class="pos-input fixed-cost-input" data-key="utilities" value="70,000">
+            </div>
+            <div class="form-field">
+              <label>인터넷 / 통신 / 세무 / 보험</label>
+              <input type="text" inputmode="numeric" class="pos-input fixed-cost-input" data-key="services" value="50,000">
+            </div>
+            <div class="form-field">
+              <label>기타 고정비</label>
+              <input type="text" inputmode="numeric" class="pos-input fixed-cost-input" data-key="otherFixed" value="0">
+            </div>
+
+            <div class="sub-box-footer">
+              <span>월 고정비 합계:</span>
+              <strong id="fixed-total-month">820,000원</strong>
+            </div>
+          </div>
+
+          <!-- Monthly Labor Costs -->
+          <div class="overhead-sub-box">
+            <div class="sub-box-title">
+              <span>👥 월 인건비</span>
+            </div>
+
+            <div class="form-field">
+              <label>직원 / 알바 급여</label>
+              <input type="text" inputmode="numeric" class="pos-input labor-cost-input" data-key="salaries" value="4,000,000">
+            </div>
+            <div class="form-field">
+              <label>주휴수당 & 4대보험</label>
+              <input type="text" inputmode="numeric" class="pos-input labor-cost-input" data-key="insurance" value="0">
+            </div>
+            <div class="form-field">
+              <label>기타 인건비</label>
+              <input type="text" inputmode="numeric" class="pos-input labor-cost-input" data-key="otherLabor" value="0">
+            </div>
+
+            <div class="sub-box-footer">
+              <span>월 인건비 합계:</span>
+              <strong id="labor-total-month">4,000,000원</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-total-bar mt-3">
+          <span>월 총 고정비 및 인건비:</span>
+          <strong id="overhead-total-text">4,820,000원</strong>
+        </div>
+
+        <!-- Optional 1-Cup Overhead Allocation -->
+        <div class="volume-highlight-box mt-3">
+          <label for="input-monthly-volume">📈 월 예상 총 판매 잔수 <span style="font-size:11px; font-weight:normal; color:var(--text-muted);">(선택 사항 - 입력 시 1잔당 고정비 배분 계산)</span></label>
+          <div class="input-with-unit mt-2">
+            <input type="text" inputmode="numeric" id="input-monthly-volume" class="pos-input" value="" placeholder="미입력 시 1잔 직접원가만 계산">
+            <span class="unit-tag">잔 / 월</span>
+          </div>
+          <span class="field-calc-hint" id="vol-warning-hint">월 판매 잔수를 입력하면 월 고정비·인건비가 1잔당 비용으로 배분됩니다. (비워두면 0원/미배분 처리)</span>
+        </div>
+      </section>
+
+      <!-- ⑧ 판매가격 (Selling Price) -->
+      <section class="pos-card price-card-highlight">
+        <div class="card-step-header">
+          <span class="step-num">⑧</span>
+          <h2>판매가격 설정</h2>
+        </div>
+
+        <div class="form-field">
+          <label for="input-selling-price" class="label-lg">🏷️ 음료 판매가격</label>
+          <div class="input-with-unit input-lg">
+            <input type="text" inputmode="numeric" id="input-selling-price" class="pos-input price-hero-input" value="4,500" placeholder="예: 4,500">
+            <span class="unit-tag">원</span>
+          </div>
+          <span class="field-calc-hint" id="price-warning-hint"></span>
+        </div>
+      </section>
+
+      <!-- ⑨ 최종 원가 결과 (Final Cost Result Card) -->
+      <section class="pos-card result-hero-card" id="final-result-card">
+        <div class="result-header">
+          <div class="result-title">
+            <span class="result-tag" id="res-menu-tag">메뉴명 미지정 (HOT / 매장)</span>
+            <h2>⑨ 1잔 최종 원가 계산 결과</h2>
+          </div>
+          <button type="button" id="btn-save-menu-snapshot" class="btn-save-hero">💾 이 메뉴 저장하기</button>
+        </div>
+
+        <!-- BIG FINAL COST HERO -->
+        <div class="final-cost-display">
+          <div class="cost-title" id="res-cost-title">1잔 최종 원가</div>
+          <div class="cost-amount" id="res-final-cost">68<span class="unit">원</span></div>
+          <div class="cost-formula-desc" id="res-cost-formula-desc">음료 재료비 + 포장·소모품비 + 기타 변동비(수수료) (+ 고정비 배분)</div>
+        </div>
+
+        <!-- KPI SUMMARY GRID (⑩ 판매가격, ⑪ 잔당 이익, ⑫ 원가율, ⑬ 이익률) -->
+        <div class="result-kpi-grid">
+          <div class="kpi-box">
+            <span class="kpi-label">⑩ 판매가격</span>
+            <strong class="kpi-val" id="res-selling-price">4,500원</strong>
+          </div>
+          <div class="kpi-box profit-box">
+            <span class="kpi-label">⑪ 잔당 이익</span>
+            <strong class="kpi-val profit-val" id="res-net-profit">4,432원</strong>
+          </div>
+          <div class="kpi-box ratio-box">
+            <span class="kpi-label">⑫ 원가율</span>
+            <strong class="kpi-val cost-ratio-val" id="res-cost-ratio">1.5%</strong>
+          </div>
+          <div class="kpi-box profit-ratio-box">
+            <span class="kpi-label">⑬ 이익률</span>
+            <strong class="kpi-val" id="res-profit-ratio">98.5%</strong>
+          </div>
+        </div>
+
+        <!-- BREAKDOWN CONTAINER (① ~ ⑨ 항목 명시) -->
+        <div class="breakdown-container">
+          <h3>📊 1잔 원가 세부 구성요소 명세</h3>
+
+          <div class="breakdown-rows">
+            <div class="bd-row">
+              <span class="bd-label">① 메뉴명</span>
+              <div class="bd-val-group">
+                <strong id="res-detail-menu-name">메뉴명 미지정</strong>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">② 음료 온도</span>
+              <div class="bd-val-group">
+                <strong id="res-detail-temp">HOT</strong>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">③ 이용 형태</span>
+              <div class="bd-val-group">
+                <strong id="res-detail-service">매장</strong>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">④ 음료 재료비 (1잔)</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-ing">0원</strong>
+                <span class="bd-pct" id="bd-pct-ing">(0.0%)</span>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">⑤ 포장 · 소모품비 (1잔)</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-pack">0원</strong>
+                <span class="bd-pct" id="bd-pct-pack">(0.0%)</span>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">⑥ 기타 1잔당 변동비</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-extra-var">0원</strong>
+                <span class="bd-pct" id="bd-pct-extra-var">(0.0%)</span>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">⑦ 결제수수료 (1잔)</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-fee">68원</strong>
+                <span class="bd-pct" id="bd-pct-fee">(100.0%)</span>
+              </div>
+            </div>
+
+            <div class="bd-row highlight-direct-cost">
+              <span class="bd-label">1잔 직접원가 소계 (④+⑤+⑥+⑦)</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-direct" style="color:var(--primary-accent); font-size:15px;">68원</strong>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">⑧ 고정비 · 인건비 배부 원가 (1잔)</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-overhead-per-cup">0원 (미배분)</strong>
+                <span class="bd-pct" id="bd-pct-overhead">(0.0%)</span>
+              </div>
+            </div>
+
+            <div class="bd-row highlight-direct-cost" style="border-color:var(--primary-accent); background:#FEF3C7;">
+              <span class="bd-label" style="font-weight:700; color:#92400E;">⑨ 최종 1잔 원가</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-final-total" style="color:#92400E; font-size:16px;">68원</strong>
+              </div>
+            </div>
+
+            <!-- Monthly Overhead Section Divider -->
+            <div class="bd-section-divider">🏢 월 지출 비용 관리 (참고)</div>
+
+            <div class="bd-row">
+              <span class="bd-label">월 고정비 합계</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-fix">820,000원</strong>
+              </div>
+            </div>
+
+            <div class="bd-row">
+              <span class="bd-label">월 인건비 합계</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-lab">4,000,000원</strong>
+              </div>
+            </div>
+
+            <div class="bd-row highlight-overhead-cost">
+              <span class="bd-label">월 총 고정비 및 인건비</span>
+              <div class="bd-val-group">
+                <strong id="bd-val-overhead-sum" style="color:var(--text-dark); font-size:15px;">4,820,000원</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Modal 1: Saved Menus List -->
+    <div class="modal-backdrop" id="modal-saved-menus">
+      <div class="modal-window">
+        <div class="modal-head">
+          <h3>📁 저장된 메뉴 목록</h3>
+          <button type="button" class="modal-close-btn" data-close="modal-saved-menus">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div id="saved-menus-container">
+            <!-- Dynamic Saved Menus inserted by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Backup & Settings Modal -->
+    <div class="modal-backdrop" id="modal-settings">
+      <div class="modal-window">
+        <div class="modal-head">
+          <h3>⚙️ 데이터 백업 및 관리</h3>
+          <button type="button" class="modal-close-btn" data-close="modal-settings">&times;</button>
+        </div>
+        <div class="modal-content">
+          <div class="settings-block">
+            <h4>📦 데이터 백업 및 복원</h4>
+            <p>현재 입력된 데이터를 JSON 파일로 내보내거나 기존 백업 파일을 불러옵니다.</p>
+            <div class="settings-btn-row">
+              <button type="button" id="btn-export-json" class="btn-action">📥 백업 파일 내보내기 (JSON)</button>
+              <label class="btn-action outline">
+                📤 백업 파일 불러오기 (JSON)
+                <input type="file" id="input-import-json" accept=".json" style="display:none;">
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-block mt-4">
+            <h4>⚠️ 데이터 초기화</h4>
+            <p>모든 저장된 데이터를 삭제하고 초기 상태로 되돌립니다.</p>
+            <button type="button" id="btn-reset-all" class="btn-action danger">🔥 전체 데이터 초기화</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="app.js?v=5.0"></script>
+</body>
+</html>

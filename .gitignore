@@ -1,0 +1,21 @@
+# 임시 스크립트 및 테스트 파일
+scratch/
+
+# 의존성 및 빌드 산출물
+node_modules/
+dist/
+build/
+
+# 운영체제 임시 파일
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# 로그 및 환경 설정
+*.log
+.env
+.env.local
+
+# 에디터 및 IDE 설정
+.vscode/
+.idea/
