@@ -887,3 +887,681 @@ label {
   gap: 8px;
   margin-top: 8px;
 }
+
+
+/* ==========================================================================
+   PRO MONETIZATION & COMMERCIAL SAAS STYLES
+   ========================================================================== */
+
+/* Pro Badges & Buttons */
+.badge-pro {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  margin-left: 6px;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+}
+
+.badge-pro.active-pro {
+  background: linear-gradient(135deg, #10B981, #059669);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.badge-pro-tag {
+  background: #FEF3C7;
+  color: #B45309;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #FCD34D;
+  margin-left: 6px;
+}
+
+.nav-btn.highlight-pro {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #FFFFFF;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nav-btn.highlight-pro:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+}
+
+/* Promo Banner */
+.promo-banner {
+  background: linear-gradient(90deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%);
+  color: #FFFFFF;
+  padding: 10px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.promo-banner-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.promo-tag {
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.promo-text {
+  flex: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.promo-btn {
+  background: #F59E0B;
+  color: #111827;
+  border: none;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.promo-btn:hover {
+  background: #FBBF24;
+}
+
+/* Toolbar Pro Actions */
+.tool-right {
+  display: flex;
+  gap: 6px;
+}
+
+.pro-action-btn {
+  background: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  color: var(--text-dark);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pro-action-btn:hover {
+  border-color: #F59E0B;
+  color: #B45309;
+}
+
+.mini-lock {
+  background: #FEF3C7;
+  color: #B45309;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ⑩ BEP Section & Paywall */
+.pro-card-box {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #FCD34D;
+  background: #FFFDF9;
+}
+
+.pro-badge-icon {
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+  color: #FFFFFF !important;
+}
+
+.bep-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  background: #FEF3C7;
+  color: #92400E;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.bep-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.bep-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.bep-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.bep-kpi-card.highlight-bep {
+  border-color: #F59E0B;
+  background: #FEF3C7;
+}
+
+.bep-kpi-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.bep-kpi-value {
+  font-size: 17px;
+  font-weight: 800;
+  font-family: var(--font-num);
+  color: var(--text-dark);
+}
+
+.bep-kpi-value.highlight-num {
+  color: #B45309;
+  font-size: 20px;
+}
+
+.bep-kpi-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Delivery Channel Table */
+.delivery-table-container {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.delivery-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.del-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+
+.del-row-name {
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+}
+
+.del-row-sub {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.del-row-values {
+  text-align: right;
+}
+
+.del-margin-val {
+  font-weight: 800;
+  font-family: var(--font-num);
+  color: var(--emerald);
+  font-size: 14px;
+}
+
+/* Pro Lock Overlay (Paywall) */
+.pro-lock-overlay {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+  z-index: 10;
+  transition: opacity 0.3s ease;
+}
+
+.pro-lock-overlay.unlocked {
+  display: none !important;
+}
+
+.pro-lock-content {
+  background: #FFFFFF;
+  border: 1px solid #FCD34D;
+  border-radius: var(--radius-md);
+  padding: 24px 20px;
+  max-width: 360px;
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2);
+}
+
+.lock-big-icon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.pro-lock-content h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.pro-lock-content p {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.btn-unlock-pro {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #FFFFFF;
+  border: none;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+  transition: transform 0.15s ease;
+}
+
+.btn-unlock-pro:hover {
+  transform: translateY(-1px);
+}
+
+/* Pricing Modal */
+.modal-pricing-window {
+  max-width: 620px;
+}
+
+.pricing-head-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pricing-intro-banner {
+  background: #FEF3C7;
+  border: 1px solid #FCD34D;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.hero-callout {
+  font-size: 13.5px;
+  color: #92400E;
+  margin-bottom: 2px;
+}
+
+.sub-callout {
+  font-size: 11.5px;
+  color: #B45309;
+}
+
+.pricing-cards-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 12px;
+}
+
+.pricing-card {
+  position: relative;
+  background: #FFFFFF;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pricing-card:hover {
+  border-color: #F59E0B;
+}
+
+.pricing-card.selected {
+  border-color: #F59E0B;
+  background: #FFFDF9;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);
+}
+
+.pricing-card.card-featured {
+  border-color: #F59E0B;
+}
+
+.popular-ribbon {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.plan-header h4 {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.price-box {
+  margin: 8px 0 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.original-price {
+  font-size: 12px;
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.actual-price {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-num);
+  color: #B45309;
+}
+
+.price-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.plan-period {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-dark);
+}
+
+.btn-select-plan {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border);
+  background: #FFFFFF;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-select-plan.selected-btn {
+  background: #F59E0B;
+  color: #FFFFFF;
+  border-color: #F59E0B;
+}
+
+/* Pay Methods */
+.pay-method-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.pay-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.pay-method-radio {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 4px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-method-radio input {
+  display: none;
+}
+
+.pay-method-radio.active {
+  border-color: #4F46E5;
+  background: #EEF2FF;
+  color: #4338CA;
+}
+
+/* Checkout Button */
+.btn-checkout-hero {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #FFFFFF;
+  border: none;
+  width: 100%;
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-checkout-hero:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.checkout-btn-text {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.checkout-btn-sub {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.checkout-guarantee {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* Success Modal */
+.modal-success-window {
+  max-width: 440px;
+}
+
+.success-modal-body {
+  text-align: center;
+  padding: 24px 20px;
+}
+
+.success-icon-badge {
+  font-size: 48px;
+  display: inline-block;
+  background: #FEF3C7;
+  width: 80px;
+  height: 80px;
+  line-height: 80px;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.issued-license-box {
+  background: #F3F4F6;
+  border: 1px dashed #D1D5DB;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.license-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.license-val {
+  font-size: 17px;
+  font-family: var(--font-num);
+  color: #4338CA;
+  display: block;
+  margin-top: 4px;
+}
+
+.receipt-mini-summary {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.rec-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.rec-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Settings Modal Membership Addons */
+.pro-member-status-block {
+  background: #FFFDF9;
+  border: 1px solid #FCD34D !important;
+}
+
+.member-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.current-plan-badge {
+  font-size: 13px;
+  font-weight: 800;
+  color: #B45309;
+}
+
+.license-input-group {
+  display: flex;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   PRINT STYLES (@media print for Professional Clean A4 Cost Sheet)
+   ========================================================================== */
+@media print {
+  body {
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    font-size: 12pt;
+  }
+
+  .pos-header,
+  .promo-banner,
+  .top-toolbar,
+  .toggle-group-2,
+  .btn-save-hero,
+  .btn-action,
+  .modal-backdrop,
+  #bep-lock-overlay,
+  .field-calc-hint,
+  .auto-rule-indicator,
+  .btn-del-ing {
+    display: none !important;
+  }
+
+  .pos-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .pos-card {
+    border: 1px solid #D1D5DB !important;
+    box-shadow: none !important;
+    margin-bottom: 12px !important;
+    page-break-inside: avoid;
+  }
+
+  .final-cost-display {
+    background: #F3F4F6 !important;
+    border: 2px solid #000000 !important;
+  }
+
+  .cost-amount {
+    color: #000000 !important;
+  }
+
+  .bep-dashboard-grid {
+    border: 1px solid #000000 !important;
+  }
+}

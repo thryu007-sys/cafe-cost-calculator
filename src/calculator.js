@@ -1,6 +1,6 @@
 /**
  * 카페 원가계산기 - Core Calculation Engine
- * (1잔 직접원가 + 선택적 고정비·인건비 배분 정밀 연산 엔진)
+ * (1잔 직접원가 + 선택적 고정비·인건비 배분 정밀 연산 엔진 + 손익분기점(BEP) 분석기)
  */
 
 // Packaging Auto-Apply Rules Definition
@@ -181,9 +181,93 @@ export function calculateVariableCosts(sellingPrice, cardFeeRate, deliveryFeeRat
 }
 
 /**
+ * Calculates Break-Even Point (손익분기점 BEP)
+ */
+export function calculateBreakEvenPoint(sellingPrice, directCostPerCup, totalOverheadMonth) {
+  const price = parseNumber(sellingPrice);
+  const directCost = parseNumber(directCostPerCup);
+  const overhead = parseNumber(totalOverheadMonth);
+
+  // 1잔당 공헌이익 (판매가 - 직접원가)
+  const contributionMargin = price - directCost;
+
+  if (contributionMargin <= 0 || overhead <= 0) {
+    return {
+      contributionMargin: Math.max(0, contributionMargin),
+      marginRatio: price > 0 ? (contributionMargin / price) * 100 : 0,
+      bepCupsMonth: 0,
+      bepCupsDay: 0,
+      bepRevenueMonth: 0,
+      isFeasible: false
+    };
+  }
+
+  const bepCupsMonth = Math.ceil(overhead / contributionMargin);
+  const bepCupsDay = Math.ceil(bepCupsMonth / 30);
+  const bepRevenueMonth = bepCupsMonth * price;
+
+  return {
+    contributionMargin,
+    marginRatio: (contributionMargin / price) * 100,
+    bepCupsMonth,
+    bepCupsDay,
+    bepRevenueMonth,
+    isFeasible: true
+  };
+}
+
+/**
+ * Calculates Multi-Channel Delivery Margin Simulation
+ */
+export function calculateDeliverySimulations(sellingPrice, directCostPerCup) {
+  const price = parseNumber(sellingPrice);
+  const directCost = parseNumber(directCostPerCup);
+
+  const channels = [
+    {
+      name: '매장 직접 판매',
+      feeRate: 1.5,
+      deliveryTip: 0,
+      desc: '카드 수수료 1.5%'
+    },
+    {
+      name: '배달의민족 (배민원)',
+      feeRate: 12.8, // 중개 9.8% + 결제 3%
+      deliveryTip: 2900,
+      desc: '중개수수료 9.8% + 결제수수료 3%'
+    },
+    {
+      name: '쿠팡이츠 (스마트요금제)',
+      feeRate: 12.8,
+      deliveryTip: 2900,
+      desc: '중개 9.8% + 결제 3%'
+    },
+    {
+      name: '요기요 (기본형)',
+      feeRate: 15.5,
+      deliveryTip: 2900,
+      desc: '중개 12.5% + 결제 3%'
+    }
+  ];
+
+  return channels.map(ch => {
+    const feeAmount = Math.round(price * (ch.feeRate / 100));
+    const profit = Math.round(price - directCost - feeAmount);
+    const marginRate = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
+    return {
+      ...ch,
+      feeAmount,
+      profit,
+      marginRate
+    };
+  });
+}
+
+/**
  * Main Full Menu Cost Calculation Function
  * - 1잔 직접원가 (재료비 + 포장비 + 변동비 + 결제수수료)
  * - 선택적 월 고정비·인건비 1잔 배분 (판매잔수 입력 시에만 계산)
+ * - 손익분기점(BEP) 연산
  * - 최종 1잔 원가 및 이익률 산출
  */
 export function calculateFullMenuCost(state = {}) {
@@ -236,6 +320,12 @@ export function calculateFullMenuCost(state = {}) {
   const costRatio = sellingPrice > 0 ? (finalTotalCost / sellingPrice) * 100 : 0;
   const profitRatio = sellingPrice > 0 ? (netProfit / sellingPrice) * 100 : 0;
 
+  // 6. 손익분기점 (BEP) 계산 (PRO 특화 기능)
+  const bep = calculateBreakEvenPoint(sellingPrice, directCostPerCup, totalOverheadMonth);
+
+  // 7. 배달 플랫폼별 마진 시뮬레이션
+  const deliverySimulations = calculateDeliverySimulations(sellingPrice, directCostPerCup);
+
   return {
     menuName: state.menuName || '',
     temp,
@@ -269,6 +359,10 @@ export function calculateFullMenuCost(state = {}) {
     sellingPrice,        // ⑩ 판매가격
     netProfit,           // ⑪ 1잔당 이익
     costRatio,           // ⑫ 원가율
-    profitRatio          // ⑬ 이익률
+    profitRatio,         // ⑬ 이익률
+
+    // 손익분기점 & 시뮬레이션
+    bep,
+    deliverySimulations
   };
 }

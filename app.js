@@ -1,12 +1,42 @@
 /**
- * 카페 원가계산기 - App Controller & Live DOM Input Synchronized Precision Engine
+ * 카페 원가계산기 PRO - App Controller & Live Precision Monetization Engine
  */
 
-import { loadSavedState, saveStateToStorage, DEFAULT_CLEAN_STATE, STANDARD_TEST_STATE, exportStateAsJSON, importStateFromJSON } from './src/storage.js';
-import { calculateFullMenuCost, PACKAGING_RULES, calculatePackagingUnitCost, parseNumber, formatCommaNumber } from './src/calculator.js';
+import { 
+  loadSavedState, 
+  saveStateToStorage, 
+  DEFAULT_CLEAN_STATE, 
+  STANDARD_TEST_STATE, 
+  exportStateAsJSON, 
+  importStateFromJSON, 
+  activateProMembership, 
+  restoreProWithLicenseKey 
+} from './src/storage.js';
+
+import { 
+  calculateFullMenuCost, 
+  PACKAGING_RULES, 
+  calculatePackagingUnitCost, 
+  parseNumber, 
+  formatCommaNumber 
+} from './src/calculator.js';
+
+import { 
+  PRICING_PLANS, 
+  processCheckout, 
+  checkFeatureAccess, 
+  initPaymentSDKs 
+} from './src/payment.js';
+
+import { 
+  downloadCostExcel, 
+  printCostReport 
+} from './src/export.js';
 
 // Global App State
 let state = loadSavedState();
+let selectedPlanId = 'pro_lifetime';
+let selectedPayMethod = 'card';
 
 // Helper for formatting summary texts rounded to KRW integer
 function formatKRW(val) {
@@ -59,6 +89,12 @@ function formatInputFieldWithCommas(inputEl) {
 
 // DOM Elements Cache
 const elements = {
+  // Header & Promotion
+  headerProBadge: document.getElementById('header-pro-badge'),
+  openPricingBtn: document.getElementById('open-pricing-btn'),
+  promoBanner: document.getElementById('promo-banner'),
+  bannerPricingBtn: document.getElementById('banner-pricing-btn'),
+
   // ① Menu Name
   inputMenuName: document.getElementById('input-menu-name'),
 
@@ -130,9 +166,26 @@ const elements = {
   bdValLab: document.getElementById('bd-val-lab'),
   bdValOverheadSum: document.getElementById('bd-val-overhead-sum'),
 
-  // Toolbar & Modals
+  // ⑩ BEP & Delivery Simulator
+  bepSection: document.getElementById('bep-section'),
+  bepStatusPill: document.getElementById('bep-status-pill'),
+  bepMarginCup: document.getElementById('bep-margin-cup'),
+  bepMarginRatio: document.getElementById('bep-margin-ratio'),
+  bepCupsMonth: document.getElementById('bep-cups-month'),
+  bepCupsDay: document.getElementById('bep-cups-day'),
+  deliverySimTable: document.getElementById('delivery-sim-table'),
+  bepLockOverlay: document.getElementById('bep-lock-overlay'),
+  btnUnlockBep: document.getElementById('btn-unlock-bep'),
+
+  // Toolbar Actions
   btnLoadTestData: document.getElementById('btn-load-test-data'),
   btnResetForm: document.getElementById('btn-reset-form'),
+  btnExportExcel: document.getElementById('btn-export-excel'),
+  btnPrintReport: document.getElementById('btn-print-report'),
+  lockExcel: document.getElementById('lock-excel'),
+  lockPrint: document.getElementById('lock-print'),
+
+  // Modals
   openSavedMenusBtn: document.getElementById('open-saved-menus-btn'),
   modalSavedMenus: document.getElementById('modal-saved-menus'),
   savedMenusContainer: document.getElementById('saved-menus-container'),
@@ -140,7 +193,30 @@ const elements = {
   modalSettings: document.getElementById('modal-settings'),
   btnExportJson: document.getElementById('btn-export-json'),
   inputImportJson: document.getElementById('input-import-json'),
-  btnResetAll: document.getElementById('btn-reset-all')
+  btnResetAll: document.getElementById('btn-reset-all'),
+
+  // Settings Pro & PG Addons
+  settingsPlanBadge: document.getElementById('settings-plan-badge'),
+  settingsUpgradeBtn: document.getElementById('settings-upgrade-btn'),
+  settingsLicenseInfo: document.getElementById('settings-license-info'),
+  settingsLicenseKey: document.getElementById('settings-license-key'),
+  inputLicenseKey: document.getElementById('input-license-key'),
+  btnApplyLicense: document.getElementById('btn-apply-license'),
+  paymentHistoryList: document.getElementById('payment-history-list'),
+  inputCustomPg: document.getElementById('input-custom-pg'),
+
+  // Pricing Modal
+  modalPricing: document.getElementById('modal-pricing'),
+  btnDoCheckout: document.getElementById('btn-do-checkout'),
+
+  // Success Modal
+  modalPaymentSuccess: document.getElementById('modal-payment-success'),
+  successModalLicenseKey: document.getElementById('success-modal-license-key'),
+  btnCopyLicense: document.getElementById('btn-copy-license'),
+  recPlanName: document.getElementById('rec-plan-name'),
+  recPlanAmount: document.getElementById('rec-plan-amount'),
+  recPlanReceipt: document.getElementById('rec-plan-receipt'),
+  btnCloseSuccess: document.getElementById('btn-close-success')
 };
 
 /**
@@ -173,6 +249,7 @@ function syncLiveDOMInputsToState() {
   if (elements.inputDeliveryFee) state.deliveryFeeRate = parseNumber(elements.inputDeliveryFee.value);
   if (elements.inputExtraVariable) state.extraVariableCost = parseNumber(elements.inputExtraVariable.value);
   if (elements.inputMenuName) state.menuName = elements.inputMenuName.value;
+  if (elements.inputCustomPg) state.customPgKey = elements.inputCustomPg.value.trim();
 }
 
 /**
@@ -277,6 +354,117 @@ function updateCalculationsAndOutputs() {
   if (elements.bdValFix) elements.bdValFix.textContent = formatKRW(calc.totalFixedMonth);
   if (elements.bdValLab) elements.bdValLab.textContent = formatKRW(calc.totalLaborMonth);
   if (elements.bdValOverheadSum) elements.bdValOverheadSum.textContent = formatKRW(calc.totalOverheadMonth);
+
+  // ⑩ 손익분기점 (BEP) & 배달 시뮬레이션 UI
+  if (elements.bepMarginCup) elements.bepMarginCup.textContent = formatKRW(calc.bep.contributionMargin);
+  if (elements.bepMarginRatio) elements.bepMarginRatio.textContent = `마진율 ${calc.bep.marginRatio.toFixed(1)}%`;
+
+  if (elements.bepCupsMonth) {
+    elements.bepCupsMonth.textContent = calc.bep.isFeasible ? `${formatCommaNumber(calc.bep.bepCupsMonth)}잔` : '산출 불가';
+  }
+  if (elements.bepCupsDay) {
+    elements.bepCupsDay.textContent = calc.bep.isFeasible ? `${formatCommaNumber(calc.bep.bepCupsDay)}잔 / 일` : '산출 불가';
+  }
+  if (elements.bepStatusPill) {
+    elements.bepStatusPill.textContent = calc.bep.isFeasible ? '✅ 손익분기점 분석 완료' : '⚠️ 데이터 부족';
+  }
+
+  // Delivery simulation rows
+  if (elements.deliverySimTable && calc.deliverySimulations) {
+    elements.deliverySimTable.innerHTML = calc.deliverySimulations.map(ch => `
+      <div class="del-row">
+        <div class="del-row-name">
+          <span>${ch.name}</span>
+          <span class="del-row-sub">${ch.desc}</span>
+        </div>
+        <div class="del-row-values">
+          <div class="del-margin-val">${formatKRW(ch.profit)}</div>
+          <div class="del-row-sub">마진율 ${ch.marginRate}% (수수료 ${formatKRW(ch.feeAmount)})</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // PRO Membership UI Status Reflection
+  updateProMembershipUI();
+}
+
+/**
+ * Updates UI based on PRO membership state
+ */
+function updateProMembershipUI() {
+  const isPro = state.isPro;
+
+  if (isPro) {
+    if (elements.headerProBadge) {
+      elements.headerProBadge.textContent = 'PRO';
+      elements.headerProBadge.className = 'badge-pro active-pro';
+    }
+    if (elements.openPricingBtn) {
+      elements.openPricingBtn.textContent = '👑 PRO 이용중';
+      elements.openPricingBtn.classList.remove('highlight-pro');
+    }
+    if (elements.promoBanner) {
+      elements.promoBanner.style.display = 'none';
+    }
+    if (elements.bepLockOverlay) {
+      elements.bepLockOverlay.classList.add('unlocked');
+    }
+    if (elements.lockExcel) elements.lockExcel.style.display = 'none';
+    if (elements.lockPrint) elements.lockPrint.style.display = 'none';
+
+    if (elements.settingsPlanBadge) {
+      elements.settingsPlanBadge.textContent = state.proPlan === 'pro_lifetime' ? '👑 PRO 평생 이용권 (VIP)' : '👑 PRO 월간 구독 회원';
+    }
+    if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'none';
+    if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'block';
+    if (elements.settingsLicenseKey) elements.settingsLicenseKey.textContent = state.licenseKey || 'CAFE-PRO-ACTIVE';
+  } else {
+    if (elements.headerProBadge) {
+      elements.headerProBadge.textContent = 'FREE';
+      elements.headerProBadge.className = 'badge-pro';
+    }
+    if (elements.openPricingBtn) {
+      elements.openPricingBtn.textContent = '💎 PRO 업그레이드';
+      elements.openPricingBtn.classList.add('highlight-pro');
+    }
+    if (elements.promoBanner) {
+      elements.promoBanner.style.display = 'block';
+    }
+    if (elements.bepLockOverlay) {
+      elements.bepLockOverlay.classList.remove('unlocked');
+    }
+    if (elements.lockExcel) elements.lockExcel.style.display = 'inline-block';
+    if (elements.lockPrint) elements.lockPrint.style.display = 'inline-block';
+
+    if (elements.settingsPlanBadge) {
+      elements.settingsPlanBadge.textContent = 'FREE (무료 베이직 회원)';
+    }
+    if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'inline-block';
+    if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'none';
+  }
+
+  // Render Payment history in Settings
+  if (elements.paymentHistoryList) {
+    if (state.paymentHistory && state.paymentHistory.length > 0) {
+      elements.paymentHistoryList.innerHTML = state.paymentHistory.map(item => `
+        <div class="saved-card">
+          <div>
+            <strong style="font-size:13px;">${item.orderName}</strong>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+              결제금액: <strong>${formatKRW(item.amount)}</strong> | 결제일: ${item.paidAt}
+            </div>
+            <div style="font-size:11px; color:#4338CA; margin-top:2px;">
+              라이선스: ${item.licenseKey} (영수증 #${item.receiptNo || 'REC-OK'})
+            </div>
+          </div>
+          <span style="font-size:11.5px; font-weight:700; color:var(--emerald);">결제완료</span>
+        </div>
+      `).join('');
+    } else {
+      elements.paymentHistoryList.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">결제 내역이 없습니다.</p>';
+    }
+  }
 }
 
 /**
@@ -426,6 +614,7 @@ function syncFormInputsFromState() {
     elements.inputMonthlyVolume.value = state.monthlyVolume > 0 ? formatCommaNumber(state.monthlyVolume) : '';
   }
   if (elements.inputSellingPrice) elements.inputSellingPrice.value = formatCommaNumber(state.sellingPrice);
+  if (elements.inputCustomPg) elements.inputCustomPg.value = state.customPgKey || '';
 
   // Packaging Inputs
   document.querySelectorAll('.pack-price-input').forEach(inp => {
@@ -530,13 +719,11 @@ function setupEventListeners() {
 
       renderIngredientsDOM();
 
-      // Focus newly added row's name field
       const newRowInput = elements.ingredientsListContainer.querySelector(`.ing-input-name[data-id="${newId}"]`);
       if (newRowInput) newRowInput.focus();
     });
   }
 
-  // Delegate Ingredient Row Typing Events WITHOUT re-rendering DOM!
   if (elements.ingredientsListContainer) {
     elements.ingredientsListContainer.addEventListener('input', (e) => {
       const id = e.target.getAttribute('data-id');
@@ -560,7 +747,6 @@ function setupEventListeners() {
         ing.usage = parseNumber(e.target.value);
       }
 
-      // Update individual row cost label
       const costTextEl = document.getElementById(`ing-cost-${id}`);
       if (costTextEl) {
         const price = parseNumber(ing.price);
@@ -585,7 +771,6 @@ function setupEventListeners() {
       }
     });
 
-    // Delete Ingredient Row
     elements.ingredientsListContainer.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-del-ing')) {
         const id = e.target.getAttribute('data-id');
@@ -662,9 +847,19 @@ function setupEventListeners() {
   if (elements.btnLoadTestData) {
     elements.btnLoadTestData.addEventListener('click', () => {
       if (confirm('아메리카노 표준 테스트 데이터로 현재 구성을 초기화하시겠습니까?')) {
+        const isPro = state.isPro;
+        const proPlan = state.proPlan;
+        const licenseKey = state.licenseKey;
+        const paymentHistory = state.paymentHistory || [];
         const savedMenus = state.savedMenus || [];
+
         state = JSON.parse(JSON.stringify(STANDARD_TEST_STATE));
+        state.isPro = isPro;
+        state.proPlan = proPlan;
+        state.licenseKey = licenseKey;
+        state.paymentHistory = paymentHistory;
         state.savedMenus = savedMenus;
+
         syncFormInputsFromState();
       }
     });
@@ -673,11 +868,51 @@ function setupEventListeners() {
   if (elements.btnResetForm) {
     elements.btnResetForm.addEventListener('click', () => {
       if (confirm('모든 입력 내용을 비우고 초기 상태로 돌아가시겠습니까?')) {
+        const isPro = state.isPro;
+        const proPlan = state.proPlan;
+        const licenseKey = state.licenseKey;
+        const paymentHistory = state.paymentHistory || [];
         const savedMenus = state.savedMenus || [];
+
         state = JSON.parse(JSON.stringify(DEFAULT_CLEAN_STATE));
+        state.isPro = isPro;
+        state.proPlan = proPlan;
+        state.licenseKey = licenseKey;
+        state.paymentHistory = paymentHistory;
         state.savedMenus = savedMenus;
+
         syncFormInputsFromState();
       }
+    });
+  }
+
+  // 💎 PRO Action: Excel Export
+  if (elements.btnExportExcel) {
+    elements.btnExportExcel.addEventListener('click', () => {
+      if (!checkFeatureAccess(state, 'excel_export')) {
+        openModal(elements.modalPricing);
+        return;
+      }
+      const calc = calculateFullMenuCost(state);
+      downloadCostExcel(state, calc);
+    });
+  }
+
+  // 💎 PRO Action: Print Report
+  if (elements.btnPrintReport) {
+    elements.btnPrintReport.addEventListener('click', () => {
+      if (!checkFeatureAccess(state, 'print_report')) {
+        openModal(elements.modalPricing);
+        return;
+      }
+      printCostReport();
+    });
+  }
+
+  // 💎 PRO Action: Unlock BEP overlay button
+  if (elements.btnUnlockBep) {
+    elements.btnUnlockBep.addEventListener('click', () => {
+      openModal(elements.modalPricing);
     });
   }
 
@@ -687,6 +922,14 @@ function setupEventListeners() {
       if (!state.menuName || !state.menuName.trim()) {
         alert('메뉴 이름을 먼저 입력해 주세요.');
         if (elements.inputMenuName) elements.inputMenuName.focus();
+        return;
+      }
+
+      // Free plan restriction: max 1 menu snapshot, Pro is unlimited
+      if (!state.isPro && state.savedMenus && state.savedMenus.length >= 1) {
+        if (confirm('무료 회원은 메뉴 저장이 1개로 제한됩니다.\n\n💎 PRO로 업그레이드하여 카페 전 메뉴를 무제한으로 저장하고 비교하시겠습니까?')) {
+          openModal(elements.modalPricing);
+        }
         return;
       }
 
@@ -720,6 +963,155 @@ function setupEventListeners() {
 
   // Modals Management
   setupModalHandlers();
+  setupPricingAndCheckoutHandlers();
+}
+
+/**
+ * Pricing & Payment Checkout Event Handlers
+ */
+function setupPricingAndCheckoutHandlers() {
+  // Open pricing modal triggers
+  if (elements.openPricingBtn) {
+    elements.openPricingBtn.addEventListener('click', () => openModal(elements.modalPricing));
+  }
+  if (elements.bannerPricingBtn) {
+    elements.bannerPricingBtn.addEventListener('click', () => openModal(elements.modalPricing));
+  }
+  if (elements.settingsUpgradeBtn) {
+    elements.settingsUpgradeBtn.addEventListener('click', () => {
+      closeModal(elements.modalSettings);
+      openModal(elements.modalPricing);
+    });
+  }
+
+  // Plan Selection Cards
+  document.querySelectorAll('.pricing-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      const plan = card.getAttribute('data-plan');
+      if (!plan) return;
+      selectedPlanId = plan;
+
+      document.querySelectorAll('.pricing-card').forEach(c => {
+        c.classList.remove('selected');
+        const btn = c.querySelector('.btn-select-plan');
+        if (btn) {
+          btn.classList.remove('selected-btn');
+          btn.textContent = '선택하기';
+        }
+      });
+
+      card.classList.add('selected');
+      const curBtn = card.querySelector('.btn-select-plan');
+      if (curBtn) {
+        curBtn.classList.add('selected-btn');
+        curBtn.textContent = '이 플랜 선택됨';
+      }
+
+      // Update Checkout Button text
+      const planInfo = PRICING_PLANS[plan];
+      if (elements.btnDoCheckout && planInfo) {
+        const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
+        if (btnText) {
+          btnText.textContent = `💳 ${formatKRW(planInfo.price)} 안전 결제하고 PRO 즉시 시작`;
+        }
+      }
+    });
+  });
+
+  // Payment Method Selection
+  document.querySelectorAll('.pay-method-radio').forEach(label => {
+    label.addEventListener('click', () => {
+      document.querySelectorAll('.pay-method-radio').forEach(l => l.classList.remove('active'));
+      label.classList.add('active');
+      const radio = label.querySelector('input');
+      if (radio) {
+        radio.checked = true;
+        selectedPayMethod = radio.value;
+      }
+    });
+  });
+
+  // Checkout Execution Button
+  if (elements.btnDoCheckout) {
+    elements.btnDoCheckout.addEventListener('click', () => {
+      const planInfo = PRICING_PLANS[selectedPlanId];
+      const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
+      const origText = btnText ? btnText.textContent : '결제하기';
+
+      if (btnText) btnText.textContent = '⏳ 결제창 호출 및 승인 처리 중...';
+      elements.btnDoCheckout.disabled = true;
+
+      processCheckout({
+        planId: selectedPlanId,
+        payMethod: selectedPayMethod,
+        customerName: '카페사장님',
+        state,
+        onSuccess: (res) => {
+          if (btnText) btnText.textContent = origText;
+          elements.btnDoCheckout.disabled = false;
+          closeModal(elements.modalPricing);
+
+          // Populate and show success modal
+          if (elements.successModalLicenseKey) elements.successModalLicenseKey.textContent = res.license;
+          if (elements.recPlanName) elements.recPlanName.textContent = res.plan.title;
+          if (elements.recPlanAmount) elements.recPlanAmount.textContent = formatKRW(res.plan.price);
+          if (elements.recPlanReceipt) elements.recPlanReceipt.textContent = res.receiptNo || 'REC-' + Date.now().toString().slice(-6);
+
+          openModal(elements.modalPaymentSuccess);
+          updateCalculationsAndOutputs();
+        },
+        onError: (err) => {
+          if (btnText) btnText.textContent = origText;
+          elements.btnDoCheckout.disabled = false;
+          alert('결제 처리 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
+        }
+      });
+    });
+  }
+
+  // Copy License Key in Success Modal
+  if (elements.btnCopyLicense) {
+    elements.btnCopyLicense.addEventListener('click', () => {
+      const key = elements.successModalLicenseKey.textContent;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(key).then(() => {
+          alert(`PRO 라이선스 키가 복사되었습니다:\n${key}`);
+        });
+      } else {
+        alert(`PRO 라이선스 키: ${key}`);
+      }
+    });
+  }
+
+  // Close Success Modal and Scroll to BEP
+  if (elements.btnCloseSuccess) {
+    elements.btnCloseSuccess.addEventListener('click', () => {
+      closeModal(elements.modalPaymentSuccess);
+      if (elements.bepSection) {
+        elements.bepSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+
+  // License Key Activation / Restore in Settings
+  if (elements.btnApplyLicense) {
+    elements.btnApplyLicense.addEventListener('click', () => {
+      const key = elements.inputLicenseKey.value;
+      if (!key || !key.trim()) {
+        alert('라이선스 키를 입력해 주세요.');
+        return;
+      }
+
+      const success = restoreProWithLicenseKey(state, key);
+      if (success) {
+        alert('🎉 축하합니다! PRO 라이선스가 성공적으로 활성화되었습니다.');
+        updateCalculationsAndOutputs();
+        closeModal(elements.modalSettings);
+      } else {
+        alert('❌ 올바르지 않은 라이선스 키입니다. 형식(예: CAFE-PRO-XXXX-XXXX)을 확인해 주세요.');
+      }
+    });
+  }
 }
 
 /**
@@ -849,6 +1241,7 @@ function renderSavedMenusList() {
 
 // Initial App Startup
 window.addEventListener('DOMContentLoaded', () => {
+  initPaymentSDKs();
   setupEventListeners();
   syncFormInputsFromState();
 });

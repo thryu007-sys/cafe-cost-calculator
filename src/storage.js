@@ -1,5 +1,5 @@
 /**
- * 카페 원가계산기 - LocalStorage Storage & Preset Data Manager
+ * 카페 원가계산기 - LocalStorage Storage, Preset Data & PRO Monetization Manager
  */
 
 const LOCAL_STORAGE_KEY = 'cafe_cost_calculator_v3_state';
@@ -47,7 +47,15 @@ export const DEFAULT_CLEAN_STATE = {
 
   sellingPrice: 4500,
 
-  savedMenus: []
+  savedMenus: [],
+
+  // 💎 PRO Monetization & Licensing
+  isPro: false,
+  proPlan: 'free',          // 'free' | 'pro_monthly' | 'pro_lifetime'
+  proActivatedAt: null,
+  licenseKey: '',
+  paymentHistory: [],
+  customPgKey: ''           // 사장님이 실제 Toss/PortOne 키 등록 시 사용
 };
 
 // 2. Standard Test State (아메리카노 표준 테스트 데이터)
@@ -103,7 +111,14 @@ export const STANDARD_TEST_STATE = {
 
   sellingPrice: 4500,
 
-  savedMenus: []
+  savedMenus: [],
+
+  isPro: false,
+  proPlan: 'free',
+  proActivatedAt: null,
+  licenseKey: '',
+  paymentHistory: [],
+  customPgKey: ''
 };
 
 /**
@@ -131,7 +146,7 @@ export function loadSavedState() {
     parsed.packPrices.carrier = 5000;
     parsed.packQtys.carrier = 100;
 
-    // Auto-migrate legacy 3,000,000 / 1,500,000 overhead defaults if found
+    // Auto-migrate legacy overhead defaults
     if (!parsed.fixedItems || parsed.fixedItems.rent === 2000000) {
       parsed.fixedItems = { ...DEFAULT_CLEAN_STATE.fixedItems };
     }
@@ -142,6 +157,11 @@ export function loadSavedState() {
     if (parsed.monthlyVolume === undefined || parsed.monthlyVolume === null) {
       parsed.monthlyVolume = 0;
     }
+
+    // Default Pro values if undefined
+    if (parsed.isPro === undefined) parsed.isPro = false;
+    if (parsed.proPlan === undefined) parsed.proPlan = 'free';
+    if (!Array.isArray(parsed.paymentHistory)) parsed.paymentHistory = [];
 
     return { ...DEFAULT_CLEAN_STATE, ...parsed };
   } catch (e) {
@@ -159,6 +179,52 @@ export function saveStateToStorage(state) {
   } catch (e) {
     console.error('Failed to save state to LocalStorage:', e);
   }
+}
+
+/**
+ * Activates PRO membership and issues a license key
+ */
+export function activateProMembership(state, plan = 'pro_lifetime', paymentDetails = {}) {
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Date.now().toString().slice(-4);
+  const license = `CAFE-PRO-${randomSuffix}`;
+
+  state.isPro = true;
+  state.proPlan = plan;
+  state.proActivatedAt = new Date().toISOString();
+  state.licenseKey = license;
+
+  if (!state.paymentHistory) state.paymentHistory = [];
+  state.paymentHistory.unshift({
+    id: 'pay-' + Date.now(),
+    orderName: plan === 'pro_lifetime' ? 'PRO 평생 이용권 (얼리버드)' : 'PRO 월간 정기구독',
+    amount: paymentDetails.amount || (plan === 'pro_lifetime' ? 29900 : 9900),
+    payMethod: paymentDetails.payMethod || '간편결제/신용카드',
+    paidAt: new Date().toLocaleDateString('ko-KR') + ' ' + new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
+    licenseKey: license,
+    receiptNo: 'REC-' + Math.floor(100000 + Math.random() * 900000)
+  });
+
+  saveStateToStorage(state);
+  return license;
+}
+
+/**
+ * Restores or activates PRO with a license key
+ */
+export function restoreProWithLicenseKey(state, inputKey) {
+  if (!inputKey || typeof inputKey !== 'string') return false;
+  const cleanKey = inputKey.trim().toUpperCase();
+
+  // Valid format: CAFE-PRO-XXXX-XXXX or VIP-XXXX
+  if (cleanKey.startsWith('CAFE-PRO-') || cleanKey.startsWith('VIP-') || cleanKey === 'CAFE702-VIP') {
+    state.isPro = true;
+    state.proPlan = 'pro_lifetime';
+    state.proActivatedAt = new Date().toISOString();
+    state.licenseKey = cleanKey;
+    saveStateToStorage(state);
+    return true;
+  }
+  return false;
 }
 
 /**

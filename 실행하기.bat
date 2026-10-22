@@ -1,6 +1,8 @@
 @echo off
 chcp 65001 > nul
 title 카페 메뉴 원가계산기 실행기
+cd /d "C:\Users\ghdix\.gemini\antigravity\scratch\cafe-cost-calculator"
+
 echo ===================================================
 echo   ☕ 카페 메뉴 원가계산기를 실행하고 있습니다...
 echo ===================================================
