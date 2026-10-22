@@ -1242,6 +1242,23 @@ function renderSavedMenusList() {
 // Initial App Startup
 window.addEventListener('DOMContentLoaded', () => {
   initPaymentSDKs();
+
+  // Check URL query for payment callback (Toss Payments redirect)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('payment_success') === 'true') {
+    const plan = urlParams.get('plan') || 'pro_lifetime';
+    const orderId = urlParams.get('orderId') || 'REC-' + Date.now().toString().slice(-6);
+    activateProMembership(state, plan, {
+      amount: plan === 'pro_lifetime' ? 29900 : 9900,
+      payMethod: '토스 간편결제/신용카드',
+      receiptNo: orderId
+    });
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => {
+      alert('🎉 토스페이먼츠 결제가 정상 완료되어 PRO 멤버십이 활성화되었습니다!');
+    }, 400);
+  }
+
   setupEventListeners();
   syncFormInputsFromState();
 });

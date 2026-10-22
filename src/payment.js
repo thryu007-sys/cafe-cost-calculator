@@ -3,7 +3,7 @@
  * (Toss Payments / PortOne 결제 연동 및 라이선스 발급 엔진)
  */
 
-import { activateProMembership, restoreProWithLicenseKey } from './storage.js';
+import { activateProMembership } from './storage.js';
 
 export const PRICING_PLANS = {
   pro_lifetime: {
@@ -46,15 +46,6 @@ export const PRICING_PLANS = {
  * Initializes PortOne / Toss Payments SDKs dynamically
  */
 export function initPaymentSDKs() {
-  // 1. PortOne SDK
-  if (!window.IMP) {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.iamport.kr/v1/iamport.js';
-    script.async = true;
-    document.head.appendChild(script);
-  }
-
-  // 2. Toss Payments SDK
   if (!window.TossPayments) {
     const tossScript = document.createElement('script');
     tossScript.src = 'https://js.tosspayments.com/v1/payment';
@@ -64,7 +55,7 @@ export function initPaymentSDKs() {
 }
 
 /**
- * Executes Payment Flow (Toss / PortOne / Direct Checkout)
+ * Executes Payment Flow (Toss Payments Interactive Checkout)
  */
 export function processCheckout({ planId, payMethod = 'card', customerName = '카페사장님', state, onSuccess, onError }) {
   const plan = PRICING_PLANS[planId] || PRICING_PLANS.pro_lifetime;
@@ -72,70 +63,60 @@ export function processCheckout({ planId, payMethod = 'card', customerName = '�
   const orderName = `카페 원가계산기 ${plan.title}`;
   const amount = plan.price;
 
-  // 1. Toss Payments integration check
-  if (window.TossPayments && state.customPgKey) {
+  // Toss Payments Client Key (사장님의 상점키가 있으면 상용키 사용, 없으면 공식 토스 테스트키 사용)
+  const clientKey = (state.customPgKey && state.customPgKey.trim()) 
+    ? state.customPgKey.trim() 
+    : 'test_ck_D5GePWvyJqK4WBaoxYKE3N7jmO56';
+
+  if (window.TossPayments) {
     try {
-      const toss = window.TossPayments(state.customPgKey || 'test_ck_D5GePWvyJqK4WBaoxYKE3N7jmO56');
-      toss.requestPayment(payMethod === 'kakaopay' ? '카카오페이' : '카드', {
+      const toss = window.TossPayments(clientKey);
+      
+      // Determine Toss payment method string
+      let tossMethod = '카드';
+      if (payMethod === 'kakaopay' || payMethod === 'tosspay' || payMethod === 'naverpay') {
+        tossMethod = '카드'; // 토스 결제창 내부에서 카카오페이/토스페이/네이버페이 원클릭 선택 지원
+      }
+
+      // Check current URL for callback
+      const currentUrl = window.location.href.split('?')[0];
+
+      toss.requestPayment(tossMethod, {
         amount,
         orderId,
         orderName,
         customerName,
-        successUrl: window.location.origin + window.location.pathname + '?payment_success=true&plan=' + planId,
-        failUrl: window.location.origin + window.location.pathname + '?payment_fail=true'
+        successUrl: currentUrl + '?payment_success=true&plan=' + planId + '&orderId=' + orderId,
+        failUrl: currentUrl + '?payment_fail=true'
+      }).then(() => {
+        // Successful checkout approval in test/live
+        const license = activateProMembership(state, planId, {
+          amount,
+          payMethod: payMethod === 'kakaopay' ? '카카오페이' : (payMethod === 'tosspay' ? '토스페이' : '신용/체크카드'),
+          receiptNo: orderId
+        });
+        if (onSuccess) onSuccess({ license, plan, receiptNo: orderId });
       }).catch(err => {
-        if (err.code !== 'USER_CANCEL') {
-          console.warn('Toss Payment fallback to direct simulated test approval:', err);
-          handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess);
-        }
-      });
-      return;
-    } catch (e) {
-      console.warn('Toss initialization fallback:', e);
-    }
-  }
-
-  // 2. PortOne (아임포트) checkout check
-  if (window.IMP) {
-    try {
-      const IMP = window.IMP;
-      IMP.init(state.customPgKey || 'imp00000000'); // 기본 공식 테스트 상점코드
-
-      const pgProvider = payMethod === 'kakaopay' ? 'kakaopay.TC0ONETIME' : 'html5_inicis';
-
-      IMP.request_pay({
-        pg: pgProvider,
-        pay_method: 'card',
-        merchant_uid: orderId,
-        name: orderName,
-        amount: amount,
-        buyer_name: customerName,
-        buyer_email: 'cafeowner@cafe702.local'
-      }, function (rsp) {
-        if (rsp.success) {
-          const license = activateProMembership(state, planId, {
-            amount,
-            payMethod,
-            receiptNo: rsp.imp_uid || rsp.merchant_uid
-          });
-          if (onSuccess) onSuccess({ license, plan, rsp });
+        if (err.code === 'USER_CANCEL') {
+          if (onError) onError(new Error('결제를 취소하셨습니다.'));
         } else {
-          // If in test mode and cancelled/mock, provide instant one-click test approval option
+          console.warn('Toss Payment Notice:', err);
+          // If window popup was blocked or in iframe, provide test approval fallback
           handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess);
         }
       });
       return;
     } catch (e) {
-      console.warn('PortOne fallback:', e);
+      console.warn('Toss initialization error, falling back:', e);
     }
   }
 
-  // 3. Fallback Instant PG Test Engine (실시간 즉시 승인 및 모달)
+  // Fallback if offline
   handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess);
 }
 
 /**
- * Internal helper for instant approval in dev/test/demo mode
+ * Internal helper for simulated test approval
  */
 function handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess) {
   setTimeout(() => {
@@ -150,7 +131,7 @@ function handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess) {
         receiptNo: 'REC-' + Date.now().toString().slice(-6)
       });
     }
-  }, 600);
+  }, 500);
 }
 
 /**
