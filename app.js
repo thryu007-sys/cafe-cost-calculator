@@ -1,3 +1,4 @@
+import { generateCustomerLicenseKey, saveBankSettings, deactivateProForTesting } from './src/storage.js';
 /**
  * 카페 원가계산기 PRO - App Controller & Live Precision Monetization Engine
  */
@@ -36,8 +37,9 @@ import {
 // Global App State
 let state = loadSavedState();
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('owner') === 'true' || urlParams.get('vip') === 'true') {
-  restoreProWithLicenseKey(state, 'CAFE-PRO-OWNER-VIP');
+const secretKey = urlParams.get('admin_secret') || urlParams.get('admin_token') || urlParams.get('secret');
+if (secretKey === 'CAFE702-BOSS' || secretKey === '7028' || urlParams.get('owner') === 'true') {
+  restoreProWithLicenseKey(state, 'CAFE702-BOSS');
 }
 let selectedPlanId = 'pro_lifetime';
 let selectedPayMethod = 'card';
@@ -205,9 +207,23 @@ const elements = {
   settingsLicenseInfo: document.getElementById('settings-license-info'),
   settingsLicenseKey: document.getElementById('settings-license-key'),
   inputLicenseKey: document.getElementById('input-license-key'),
-  btnApplyLicense: document.getElementById('btn-apply-license'),
-  btnOwnerVipQuick: document.getElementById('btn-owner-vip-quick'),
+    btnApplyLicense: document.getElementById('btn-apply-license'),
+  ownerAdminPanel: document.getElementById('owner-admin-panel'),
   btnTestCustomerMode: document.getElementById('btn-test-customer-mode'),
+  genLicenseOutput: document.getElementById('gen-license-output'),
+  btnGenerateLicense: document.getElementById('btn-generate-license'),
+  btnCopyGenLicense: document.getElementById('btn-copy-gen-license'),
+  genKeyAlert: document.getElementById('gen-key-alert'),
+  inputCfgBank: document.getElementById('input-cfg-bank'),
+  inputCfgAccount: document.getElementById('input-cfg-account'),
+  inputCfgHolder: document.getElementById('input-cfg-holder'),
+  btnSaveBankCfg: document.getElementById('btn-save-bank-cfg'),
+  bankTransferBox: document.getElementById('bank-transfer-box'),
+  bankNameText: document.getElementById('bank-name-text'),
+  bankAccText: document.getElementById('bank-acc-text'),
+  bankHolderText: document.getElementById('bank-holder-text'),
+  inputSenderName: document.getElementById('input-sender-name'),
+  inputSenderPhone: document.getElementById('input-sender-phone'),
   paymentHistoryList: document.getElementById('payment-history-list'),
   inputCustomPg: document.getElementById('input-custom-pg'),
 
@@ -420,11 +436,20 @@ function updateProMembershipUI() {
     if (elements.lockPrint) elements.lockPrint.style.display = 'none';
 
     if (elements.settingsPlanBadge) {
-      elements.settingsPlanBadge.textContent = state.proPlan === 'pro_lifetime' ? '👑 PRO 평생 이용권 (VIP)' : '👑 PRO 월간 구독 회원';
+      if (state.isOwner) {
+        elements.settingsPlanBadge.textContent = '👑 사장님(최고 관리자) 평생 VIP';
+      } else {
+        elements.settingsPlanBadge.textContent = state.proPlan === 'pro_lifetime' ? '💎 PRO 평생 소장 회원' : '💎 PRO 월간 구독 회원';
+      }
     }
     if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'none';
     if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'block';
     if (elements.settingsLicenseKey) elements.settingsLicenseKey.textContent = state.licenseKey || 'CAFE-PRO-ACTIVE';
+    
+    // Only show Owner Admin Panel if state.isOwner is true
+    if (elements.ownerAdminPanel) {
+      elements.ownerAdminPanel.style.display = state.isOwner ? 'block' : 'none';
+    }
   } else {
     if (elements.headerProBadge) {
       elements.headerProBadge.textContent = 'FREE';
@@ -448,6 +473,7 @@ function updateProMembershipUI() {
     }
     if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'inline-block';
     if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'none';
+    if (elements.ownerAdminPanel) elements.ownerAdminPanel.style.display = 'none';
   }
 
   // Render Payment history in Settings
@@ -1033,6 +1059,21 @@ function setupPricingAndCheckoutHandlers() {
       if (radio) {
         radio.checked = true;
         selectedPayMethod = radio.value;
+
+        if (elements.bankTransferBox) {
+          elements.bankTransferBox.style.display = selectedPayMethod === 'transfer' ? 'block' : 'none';
+        }
+        if (elements.btnDoCheckout) {
+          const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
+          if (btnText) {
+            const planInfo = PRICING_PLANS[selectedPlanId];
+            if (selectedPayMethod === 'transfer') {
+              btnText.textContent = `🏦 ${formatKRW(planInfo.price)} 무통장 입금 신청 완료하기`;
+            } else {
+              btnText.textContent = `💳 ${formatKRW(planInfo.price)} 안전 결제하고 PRO 즉시 시작`;
+            }
+          }
+        }
       }
     });
   });
@@ -1043,6 +1084,27 @@ function setupPricingAndCheckoutHandlers() {
       const planInfo = PRICING_PLANS[selectedPlanId];
       const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
       const origText = btnText ? btnText.textContent : '결제하기';
+
+      // 🏦 Handle Bank Transfer / Remittance flow
+      if (selectedPayMethod === 'transfer') {
+        const senderName = elements.inputSenderName ? elements.inputSenderName.value.trim() : '';
+        const senderPhone = elements.inputSenderPhone ? elements.inputSenderPhone.value.trim() : '';
+        if (!senderName) {
+          alert('입금 확인을 위해 [입금자 성함]을 입력해 주세요.');
+          if (elements.inputSenderName) elements.inputSenderName.focus();
+          return;
+        }
+        if (!senderPhone) {
+          alert('정품 라이선스 키를 받으실 [휴대폰 번호]를 입력해 주세요.');
+          if (elements.inputSenderPhone) elements.inputSenderPhone.focus();
+          return;
+        }
+
+        const bankInfo = state.bankInfo || { bank: '카카오뱅크', account: '3333-01-2345678', holder: '카페대표' };
+        alert(`[입금 신청이 정상 접수되었습니다!]\n\n입금 계좌: ${bankInfo.bank} ${bankInfo.account} (${bankInfo.holder})\n입금 금액: ${formatKRW(planInfo.price)}\n입금자명: ${senderName}\n\n입금 확인 후 [${senderPhone}] 번호로 정품 라이선스 키가 즉시 문자 발송됩니다.\n(문의 및 빠른 처리: 매장 대표번호)`);
+        closeModal(elements.modalPricing);
+        return;
+      }
 
       if (btnText) btnText.textContent = '⏳ 결제창 호출 및 승인 처리 중...';
       elements.btnDoCheckout.disabled = true;
@@ -1099,7 +1161,7 @@ function setupPricingAndCheckoutHandlers() {
     });
   }
 
-  // License Key Activation / Restore in Settings
+    // License Key Activation / Restore in Settings
   if (elements.btnApplyLicense) {
     elements.btnApplyLicense.addEventListener('click', () => {
       const key = elements.inputLicenseKey.value;
@@ -1108,44 +1170,88 @@ function setupPricingAndCheckoutHandlers() {
         return;
       }
 
-      const success = restoreProWithLicenseKey(state, key);
-      if (success) {
-        alert('🎉 축하합니다! PRO 라이선스가 성공적으로 활성화되었습니다.');
+      const res = restoreProWithLicenseKey(state, key);
+      if (res && res.success) {
+        if (res.isOwner) {
+          alert('👑 사장님(최고 관리자) 인증이 완료되었습니다!
+관리자 기능 및 모든 PRO 기능이 영구 잠금 해제되었습니다.');
+        } else {
+          alert('🎉 정품 라이선스가 성공적으로 인증되었습니다!
+모든 PRO 기능이 영구 잠금 해제되었습니다.');
+        }
         updateCalculationsAndOutputs();
         closeModal(elements.modalSettings);
       } else {
-        alert('❌ 올바르지 않은 라이선스 키입니다. 형식(예: CAFE-PRO-XXXX-XXXX 또는 OWNER)을 확인해 주세요.');
+        alert('❌ 올바르지 않은 정품 라이선스 키입니다.
+구매 시 발급받으신 형식(예: CAFE-PRO-XXXX-XXXX)을 다시 확인해 주세요.');
       }
     });
   }
 
-  // 👑 Owner Quick VIP Free Activation Button
-  if (elements.btnOwnerVipQuick) {
-    elements.btnOwnerVipQuick.addEventListener('click', () => {
-      restoreProWithLicenseKey(state, 'CAFE-PRO-OWNER-VIP');
-      alert('👑 사장님(관리자) 평생 VIP 인증이 완료되었습니다!\n모든 PRO 기능이 영구적으로 무료 잠금 해제되었습니다.');
+  // 👑 Owner Admin: Customer Mode Switch
+  if (elements.btnTestCustomerMode) {
+    elements.btnTestCustomerMode.addEventListener('click', () => {
+      deactivateProForTesting(state);
+      alert('🔄 일반 손님(무료 회원) 모드로 전환되었습니다.
+손님에게 보이는 잠금 화면 및 29,900원 결제창을 직접 테스트해 보세요.');
       updateCalculationsAndOutputs();
       closeModal(elements.modalSettings);
     });
   }
 
-  // 🔄 Test Customer (Free) Mode Button
-  if (elements.btnTestCustomerMode) {
-    elements.btnTestCustomerMode.addEventListener('click', () => {
-      import('./src/storage.js').then(module => {
-        if (module.deactivateProForTesting) {
-          module.deactivateProForTesting(state);
-        } else {
-          state.isPro = false;
-          state.proPlan = 'free';
-          state.licenseKey = '';
-        }
-        alert('🔄 일반 손님(무료 회원) 모드로 전환되었습니다.\n잠금 화면 및 결제창이 어떻게 뜨는지 직접 테스트해 보세요.');
-        updateCalculationsAndOutputs();
-        closeModal(elements.modalSettings);
-      });
+  // 👑 Owner Admin: Generate Customer License Key
+  if (elements.btnGenerateLicense) {
+    elements.btnGenerateLicense.addEventListener('click', () => {
+      const newKey = generateCustomerLicenseKey();
+      if (elements.genLicenseOutput) elements.genLicenseOutput.value = newKey;
+      if (elements.genKeyAlert) elements.genKeyAlert.style.display = 'none';
     });
   }
+
+  // 👑 Owner Admin: Copy Generated License Key
+  if (elements.btnCopyGenLicense) {
+    elements.btnCopyGenLicense.addEventListener('click', () => {
+      const key = elements.genLicenseOutput ? elements.genLicenseOutput.value : '';
+      if (!key) {
+        alert('먼저 [새 키 발급] 버튼을 눌러주세요.');
+        return;
+      }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(key).then(() => {
+          if (elements.genKeyAlert) elements.genKeyAlert.style.display = 'block';
+        });
+      } else {
+        alert(`복사된 키: ${key}`);
+      }
+    });
+  }
+
+  // 👑 Owner Admin: Save Bank Settings
+  if (elements.btnSaveBankCfg) {
+    elements.btnSaveBankCfg.addEventListener('click', () => {
+      const bank = elements.inputCfgBank ? elements.inputCfgBank.value.trim() : '';
+      const account = elements.inputCfgAccount ? elements.inputCfgAccount.value.trim() : '';
+      const holder = elements.inputCfgHolder ? elements.inputCfgHolder.value.trim() : '';
+      if (!bank || !account || !holder) {
+        alert('은행명, 계좌번호, 예금주를 모두 입력해 주세요.');
+        return;
+      }
+      saveBankSettings(state, { bank, account, holder });
+      alert('✓ 입금 계좌 정보가 저장되었습니다!');
+      syncBankDisplay();
+    });
+  }
+
+  function syncBankDisplay() {
+    const bankInfo = state.bankInfo || { bank: '카카오뱅크', account: '3333-01-2345678', holder: '카페대표' };
+    if (elements.bankNameText) elements.bankNameText.textContent = bankInfo.bank;
+    if (elements.bankAccText) elements.bankAccText.textContent = bankInfo.account;
+    if (elements.bankHolderText) elements.bankHolderText.textContent = bankInfo.holder;
+    if (elements.inputCfgBank) elements.inputCfgBank.value = bankInfo.bank;
+    if (elements.inputCfgAccount) elements.inputCfgAccount.value = bankInfo.account;
+    if (elements.inputCfgHolder) elements.inputCfgHolder.value = bankInfo.holder;
+  }
+  syncBankDisplay();
 }
 
 /**

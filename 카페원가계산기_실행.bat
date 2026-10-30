@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 > nul
-title 카페 원가계산기 PRO (사장님 전용 실행기)
+title 카페 원가계산기 PRO (사장님 관리자 모드)
 cd /d "C:\Users\ghdix\.gemini\antigravity\scratch\cafe-cost-calculator"
 
 echo ========================================================
@@ -15,7 +15,7 @@ echo   계산기를 사용하시는 동안에는 이 창을 '최소화(-)'해 �
 echo ========================================================
 echo.
 
-start http://localhost:8080?owner=true
+start http://localhost:8080?admin_secret=CAFE702-BOSS
 "C:\Users\ghdix\AppData\Local\Programs\Python\Python311\python.exe" server.py
 
 pause

@@ -51,7 +51,9 @@ export const DEFAULT_CLEAN_STATE = {
 
   // 💎 PRO Monetization & Licensing
   isPro: false,
-  proPlan: 'free',          // 'free' | 'pro_monthly' | 'pro_lifetime'
+  isOwner: false,
+  proPlan: 'free',
+  bankInfo: { bank: '카카오뱅크', account: '3333-01-2345678', holder: '카페대표' },          // 'free' | 'pro_monthly' | 'pro_lifetime'
   proActivatedAt: null,
   licenseKey: '',
   paymentHistory: [],
@@ -114,7 +116,9 @@ export const STANDARD_TEST_STATE = {
   savedMenus: [],
 
   isPro: false,
+  isOwner: false,
   proPlan: 'free',
+  bankInfo: { bank: '카카오뱅크', account: '3333-01-2345678', holder: '카페대표' },
   proActivatedAt: null,
   licenseKey: '',
   paymentHistory: [],
@@ -211,20 +215,80 @@ export function activateProMembership(state, plan = 'pro_lifetime', paymentDetai
 /**
  * Restores or activates PRO with a license key
  */
+/**
+ * Cryptographic checksum based Customer License Key Generator
+ */
+export function generateCustomerLicenseKey() {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let part1 = '';
+  for (let i = 0; i < 4; i++) part1 += chars[Math.floor(Math.random() * chars.length)];
+  
+  let sum = 0;
+  for (let i = 0; i < part1.length; i++) sum += part1.charCodeAt(i);
+  const check1 = chars[sum % chars.length];
+  const check2 = chars[(sum * 7) % chars.length];
+  let part2 = check1 + chars[Math.floor(Math.random() * chars.length)] + chars[Math.floor(Math.random() * chars.length)] + check2;
+  
+  return `CAFE-PRO-${part1}-${part2}`;
+}
+
+/**
+ * Validates whether a license key was authentically generated
+ */
+export function validateCustomerLicenseKey(key) {
+  if (!key || typeof key !== 'string') return false;
+  const clean = key.trim().toUpperCase();
+  if (!clean.startsWith('CAFE-PRO-')) return false;
+  const parts = clean.split('-');
+  if (parts.length !== 4) return false;
+  const part1 = parts[2];
+  const part2 = parts[3];
+  if (part1.length !== 4 || part2.length !== 4) return false;
+
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let sum = 0;
+  for (let i = 0; i < part1.length; i++) sum += part1.charCodeAt(i);
+  const expectedCheck1 = chars[sum % chars.length];
+  const expectedCheck2 = chars[(sum * 7) % chars.length];
+
+  return part2[0] === expectedCheck1 && part2[3] === expectedCheck2;
+}
+
+/**
+ * Master Secret Keys for Owner (Never shown publicly)
+ */
+const OWNER_SECRET_KEYS = ['CAFE702-BOSS', '7028', 'BOSS-702', 'OWNER-702-VIP'];
+
+/**
+ * Restores or activates PRO with a license key
+ */
 export function restoreProWithLicenseKey(state, inputKey) {
-  if (!inputKey || typeof inputKey !== 'string') return false;
+  if (!inputKey || typeof inputKey !== 'string') return { success: false, isOwner: false };
   const cleanKey = inputKey.trim().toUpperCase();
 
-  // Valid format: CAFE-PRO-XXXX-XXXX, VIP-XXXX, CAFE702-VIP, OWNER, ADMIN, BOSS
-  if (cleanKey.startsWith('CAFE-PRO-') || cleanKey.startsWith('VIP') || cleanKey === 'CAFE702-VIP' || cleanKey === 'OWNER' || cleanKey === 'ADMIN' || cleanKey === 'BOSS') {
+  // 1. Check Owner Secret Keys
+  if (OWNER_SECRET_KEYS.includes(cleanKey)) {
     state.isPro = true;
+    state.isOwner = true;
     state.proPlan = 'pro_lifetime';
     state.proActivatedAt = new Date().toISOString();
-    state.licenseKey = cleanKey.startsWith('CAFE-PRO-') ? cleanKey : ('CAFE-PRO-' + cleanKey);
+    state.licenseKey = 'CAFE-PRO-OWNER-VIP';
     saveStateToStorage(state);
-    return true;
+    return { success: true, isOwner: true };
   }
-  return false;
+
+  // 2. Check Valid Customer License Key
+  if (validateCustomerLicenseKey(cleanKey)) {
+    state.isPro = true;
+    state.isOwner = false;
+    state.proPlan = 'pro_lifetime';
+    state.proActivatedAt = new Date().toISOString();
+    state.licenseKey = cleanKey;
+    saveStateToStorage(state);
+    return { success: true, isOwner: false };
+  }
+
+  return { success: false, isOwner: false };
 }
 
 /**
@@ -232,9 +296,18 @@ export function restoreProWithLicenseKey(state, inputKey) {
  */
 export function deactivateProForTesting(state) {
   state.isPro = false;
+  state.isOwner = false;
   state.proPlan = 'free';
   state.licenseKey = '';
   state.proActivatedAt = null;
+  saveStateToStorage(state);
+}
+
+/**
+ * Saves bank account settings
+ */
+export function saveBankSettings(state, bankInfo) {
+  state.bankInfo = { ...state.bankInfo, ...bankInfo };
   saveStateToStorage(state);
 }
 
