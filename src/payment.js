@@ -135,8 +135,9 @@ function handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess) {
 }
 
 /**
- * Checks if user is authorized for PRO features (100% 무료 전면 개방)
+ * Checks if user is authorized for PRO features
  */
 export function checkFeatureAccess(state, featureName = 'feature') {
-  return true; // 100% 평생 무료 개방: 누구나 결제 없이 모든 기능 이용
+  if (state.isPro) return true;
+  return false;
 }

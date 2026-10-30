@@ -49,11 +49,11 @@ export const DEFAULT_CLEAN_STATE = {
 
   savedMenus: [],
 
-  // 💎 100% 평생 무료 버전 (모든 PRO 기능 기본 잠금 해제)
-  isPro: true,
-  proPlan: 'free_lifetime_unlocked',
-  proActivatedAt: '2026-10-30T00:00:00.000Z',
-  licenseKey: 'FREE-LIFETIME-VIP',
+  // 💎 PRO Monetization & Licensing
+  isPro: false,
+  proPlan: 'free',          // 'free' | 'pro_monthly' | 'pro_lifetime'
+  proActivatedAt: null,
+  licenseKey: '',
   paymentHistory: [],
   customPgKey: ''           // 사장님이 실제 Toss/PortOne 키 등록 시 사용
 };
@@ -113,11 +113,10 @@ export const STANDARD_TEST_STATE = {
 
   savedMenus: [],
 
-  // 100% 평생 무료 버전 (모든 PRO 기능 기본 잠금 해제)
-  isPro: true,
-  proPlan: 'free_lifetime_unlocked',
-  proActivatedAt: '2026-10-30T00:00:00.000Z',
-  licenseKey: 'FREE-LIFETIME-VIP',
+  isPro: false,
+  proPlan: 'free',
+  proActivatedAt: null,
+  licenseKey: '',
   paymentHistory: [],
   customPgKey: ''
 };
@@ -159,10 +158,9 @@ export function loadSavedState() {
       parsed.monthlyVolume = 0;
     }
 
-    // 100% 무료 평생 버전: 모든 사용자에게 모든 PRO 기능 강제 개방
-    parsed.isPro = true;
-    parsed.proPlan = 'free_lifetime_unlocked';
-    if (!parsed.licenseKey) parsed.licenseKey = 'FREE-LIFETIME-VIP';
+    // Default Pro values if undefined
+    if (parsed.isPro === undefined) parsed.isPro = false;
+    if (parsed.proPlan === undefined) parsed.proPlan = 'free';
     if (!Array.isArray(parsed.paymentHistory)) parsed.paymentHistory = [];
 
     return { ...DEFAULT_CLEAN_STATE, ...parsed };
@@ -217,16 +215,27 @@ export function restoreProWithLicenseKey(state, inputKey) {
   if (!inputKey || typeof inputKey !== 'string') return false;
   const cleanKey = inputKey.trim().toUpperCase();
 
-  // Valid format: CAFE-PRO-XXXX-XXXX or VIP-XXXX
-  if (cleanKey.startsWith('CAFE-PRO-') || cleanKey.startsWith('VIP-') || cleanKey === 'CAFE702-VIP') {
+  // Valid format: CAFE-PRO-XXXX-XXXX, VIP-XXXX, CAFE702-VIP, OWNER, ADMIN, BOSS
+  if (cleanKey.startsWith('CAFE-PRO-') || cleanKey.startsWith('VIP') || cleanKey === 'CAFE702-VIP' || cleanKey === 'OWNER' || cleanKey === 'ADMIN' || cleanKey === 'BOSS') {
     state.isPro = true;
     state.proPlan = 'pro_lifetime';
     state.proActivatedAt = new Date().toISOString();
-    state.licenseKey = cleanKey;
+    state.licenseKey = cleanKey.startsWith('CAFE-PRO-') ? cleanKey : ('CAFE-PRO-' + cleanKey);
     saveStateToStorage(state);
     return true;
   }
   return false;
+}
+
+/**
+ * Deactivates PRO for testing free customer experience
+ */
+export function deactivateProForTesting(state) {
+  state.isPro = false;
+  state.proPlan = 'free';
+  state.licenseKey = '';
+  state.proActivatedAt = null;
+  saveStateToStorage(state);
 }
 
 /**

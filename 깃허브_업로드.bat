@@ -9,7 +9,7 @@ echo ========================================================
 echo.
 
 git add -A
-git commit -m "100%% 무료 평생 버전 업데이트"
+git commit -m "수익화 결제 시스템 및 사장님 VIP 모드 완비"
 git push -u origin main
 
 if %errorlevel% equ 0 (

@@ -1,6 +1,10 @@
 # 임시 스크립트 및 테스트 파일
 scratch/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # 의존성 및 빌드 산출물
 node_modules/
 dist/
