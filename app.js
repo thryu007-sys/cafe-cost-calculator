@@ -393,78 +393,31 @@ function updateCalculationsAndOutputs() {
  * Updates UI based on PRO membership state
  */
 function updateProMembershipUI() {
-  const isPro = state.isPro;
+  state.isPro = true;
+  state.proPlan = 'free_lifetime_unlocked';
 
-  if (isPro) {
-    if (elements.headerProBadge) {
-      elements.headerProBadge.textContent = 'PRO';
-      elements.headerProBadge.className = 'badge-pro active-pro';
-    }
-    if (elements.openPricingBtn) {
-      elements.openPricingBtn.textContent = '👑 PRO 이용중';
-      elements.openPricingBtn.classList.remove('highlight-pro');
-    }
-    if (elements.promoBanner) {
-      elements.promoBanner.style.display = 'none';
-    }
-    if (elements.bepLockOverlay) {
-      elements.bepLockOverlay.classList.add('unlocked');
-    }
-    if (elements.lockExcel) elements.lockExcel.style.display = 'none';
-    if (elements.lockPrint) elements.lockPrint.style.display = 'none';
-
-    if (elements.settingsPlanBadge) {
-      elements.settingsPlanBadge.textContent = state.proPlan === 'pro_lifetime' ? '👑 PRO 평생 이용권 (VIP)' : '👑 PRO 월간 구독 회원';
-    }
-    if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'none';
-    if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'block';
-    if (elements.settingsLicenseKey) elements.settingsLicenseKey.textContent = state.licenseKey || 'CAFE-PRO-ACTIVE';
-  } else {
-    if (elements.headerProBadge) {
-      elements.headerProBadge.textContent = 'FREE';
-      elements.headerProBadge.className = 'badge-pro';
-    }
-    if (elements.openPricingBtn) {
-      elements.openPricingBtn.textContent = '💎 PRO 업그레이드';
-      elements.openPricingBtn.classList.add('highlight-pro');
-    }
-    if (elements.promoBanner) {
-      elements.promoBanner.style.display = 'block';
-    }
-    if (elements.bepLockOverlay) {
-      elements.bepLockOverlay.classList.remove('unlocked');
-    }
-    if (elements.lockExcel) elements.lockExcel.style.display = 'inline-block';
-    if (elements.lockPrint) elements.lockPrint.style.display = 'inline-block';
-
-    if (elements.settingsPlanBadge) {
-      elements.settingsPlanBadge.textContent = 'FREE (무료 베이직 회원)';
-    }
-    if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'inline-block';
-    if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'none';
+  if (elements.headerProBadge) {
+    elements.headerProBadge.textContent = '100% 무료 평생 버전';
+    elements.headerProBadge.className = 'badge-pro active-pro';
   }
-
-  // Render Payment history in Settings
-  if (elements.paymentHistoryList) {
-    if (state.paymentHistory && state.paymentHistory.length > 0) {
-      elements.paymentHistoryList.innerHTML = state.paymentHistory.map(item => `
-        <div class="saved-card">
-          <div>
-            <strong style="font-size:13px;">${item.orderName}</strong>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-              결제금액: <strong>${formatKRW(item.amount)}</strong> | 결제일: ${item.paidAt}
-            </div>
-            <div style="font-size:11px; color:#4338CA; margin-top:2px;">
-              라이선스: ${item.licenseKey} (영수증 #${item.receiptNo || 'REC-OK'})
-            </div>
-          </div>
-          <span style="font-size:11.5px; font-weight:700; color:var(--emerald);">결제완료</span>
-        </div>
-      `).join('');
-    } else {
-      elements.paymentHistoryList.innerHTML = '<p style="font-size:12px; color:var(--text-muted);">결제 내역이 없습니다.</p>';
-    }
+  if (elements.openPricingBtn) {
+    elements.openPricingBtn.style.display = 'none';
   }
+  if (elements.promoBanner) {
+    elements.promoBanner.style.display = 'none';
+  }
+  if (elements.bepLockOverlay) {
+    elements.bepLockOverlay.classList.add('unlocked');
+    elements.bepLockOverlay.style.display = 'none';
+  }
+  if (elements.lockExcel) elements.lockExcel.style.display = 'none';
+  if (elements.lockPrint) elements.lockPrint.style.display = 'none';
+
+  if (elements.settingsPlanBadge) {
+    elements.settingsPlanBadge.textContent = '100% 무료 평생 버전 (모든 기능 개방)';
+  }
+  if (elements.settingsUpgradeBtn) elements.settingsUpgradeBtn.style.display = 'none';
+  if (elements.settingsLicenseInfo) elements.settingsLicenseInfo.style.display = 'none';
 }
 
 /**
@@ -886,25 +839,17 @@ function setupEventListeners() {
     });
   }
 
-  // 💎 PRO Action: Excel Export
+  // 📊 Excel Export (100% 무료)
   if (elements.btnExportExcel) {
     elements.btnExportExcel.addEventListener('click', () => {
-      if (!checkFeatureAccess(state, 'excel_export')) {
-        openModal(elements.modalPricing);
-        return;
-      }
       const calc = calculateFullMenuCost(state);
       downloadCostExcel(state, calc);
     });
   }
 
-  // 💎 PRO Action: Print Report
+  // 🖨️ Print Report (100% 무료)
   if (elements.btnPrintReport) {
     elements.btnPrintReport.addEventListener('click', () => {
-      if (!checkFeatureAccess(state, 'print_report')) {
-        openModal(elements.modalPricing);
-        return;
-      }
       printCostReport();
     });
   }
@@ -925,13 +870,7 @@ function setupEventListeners() {
         return;
       }
 
-      // Free plan restriction: max 1 menu snapshot, Pro is unlimited
-      if (!state.isPro && state.savedMenus && state.savedMenus.length >= 1) {
-        if (confirm('무료 회원은 메뉴 저장이 1개로 제한됩니다.\n\n💎 PRO로 업그레이드하여 카페 전 메뉴를 무제한으로 저장하고 비교하시겠습니까?')) {
-          openModal(elements.modalPricing);
-        }
-        return;
-      }
+      // 100% 무료 버전: 모든 메뉴 무제한 저장 가능
 
       const calc = calculateFullMenuCost(state);
       const ruleKey = `${state.temp}_${state.serviceType}`;

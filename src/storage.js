@@ -49,11 +49,11 @@ export const DEFAULT_CLEAN_STATE = {
 
   savedMenus: [],
 
-  // 💎 PRO Monetization & Licensing
-  isPro: false,
-  proPlan: 'free',          // 'free' | 'pro_monthly' | 'pro_lifetime'
-  proActivatedAt: null,
-  licenseKey: '',
+  // 💎 100% 평생 무료 버전 (모든 PRO 기능 기본 잠금 해제)
+  isPro: true,
+  proPlan: 'free_lifetime_unlocked',
+  proActivatedAt: '2026-10-30T00:00:00.000Z',
+  licenseKey: 'FREE-LIFETIME-VIP',
   paymentHistory: [],
   customPgKey: ''           // 사장님이 실제 Toss/PortOne 키 등록 시 사용
 };
@@ -113,10 +113,11 @@ export const STANDARD_TEST_STATE = {
 
   savedMenus: [],
 
-  isPro: false,
-  proPlan: 'free',
-  proActivatedAt: null,
-  licenseKey: '',
+  // 100% 평생 무료 버전 (모든 PRO 기능 기본 잠금 해제)
+  isPro: true,
+  proPlan: 'free_lifetime_unlocked',
+  proActivatedAt: '2026-10-30T00:00:00.000Z',
+  licenseKey: 'FREE-LIFETIME-VIP',
   paymentHistory: [],
   customPgKey: ''
 };
@@ -158,9 +159,10 @@ export function loadSavedState() {
       parsed.monthlyVolume = 0;
     }
 
-    // Default Pro values if undefined
-    if (parsed.isPro === undefined) parsed.isPro = false;
-    if (parsed.proPlan === undefined) parsed.proPlan = 'free';
+    // 100% 무료 평생 버전: 모든 사용자에게 모든 PRO 기능 강제 개방
+    parsed.isPro = true;
+    parsed.proPlan = 'free_lifetime_unlocked';
+    if (!parsed.licenseKey) parsed.licenseKey = 'FREE-LIFETIME-VIP';
     if (!Array.isArray(parsed.paymentHistory)) parsed.paymentHistory = [];
 
     return { ...DEFAULT_CLEAN_STATE, ...parsed };
