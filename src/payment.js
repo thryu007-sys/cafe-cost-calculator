@@ -1,6 +1,6 @@
 /**
  * 카페 원가계산기 - Payment Gateway & PRO Monetization Engine
- * (Toss Payments / PortOne 결제 연동 및 라이선스 발급 엔진)
+ * (Toss Payments 결제 연동 및 라이선스 발급 엔진)
  */
 
 import { activateProMembership } from './storage.js';
@@ -56,6 +56,7 @@ export function initPaymentSDKs() {
 
 /**
  * Executes Payment Flow (Toss Payments Interactive Checkout)
+ * ※ 절대로 가짜 무료 승인을 하지 않으며, 실제 결제가 완료되었을 때만 PRO가 활성화됩니다.
  */
 export function processCheckout({ planId, payMethod = 'card', customerName = '카페사장님', state, onSuccess, onError }) {
   const plan = PRICING_PLANS[planId] || PRICING_PLANS.pro_lifetime;
@@ -63,22 +64,13 @@ export function processCheckout({ planId, payMethod = 'card', customerName = '�
   const orderName = `카페 원가계산기 ${plan.title}`;
   const amount = plan.price;
 
-  // Toss Payments Client Key (사장님의 상점키가 있으면 상용키 사용, 없으면 공식 토스 테스트키 사용)
-  const clientKey = (state.customPgKey && state.customPgKey.trim()) 
-    ? state.customPgKey.trim() 
-    : 'test_ck_D5GePWvyJqK4WBaoxYKE3N7jmO56';
+  // Toss Payments Client Key (사장님이 설정에서 등록한 실제 토스 상점키)
+  const clientKey = (state.customPgKey && state.customPgKey.trim()) ? state.customPgKey.trim() : '';
 
-  if (window.TossPayments) {
+  if (clientKey && window.TossPayments) {
     try {
       const toss = window.TossPayments(clientKey);
-      
-      // Determine Toss payment method string
       let tossMethod = '카드';
-      if (payMethod === 'kakaopay' || payMethod === 'tosspay' || payMethod === 'naverpay') {
-        tossMethod = '카드'; // 토스 결제창 내부에서 카카오페이/토스페이/네이버페이 원클릭 선택 지원
-      }
-
-      // Check current URL for callback
       const currentUrl = window.location.href.split('?')[0];
 
       toss.requestPayment(tossMethod, {
@@ -89,7 +81,7 @@ export function processCheckout({ planId, payMethod = 'card', customerName = '�
         successUrl: currentUrl + '?payment_success=true&plan=' + planId + '&orderId=' + orderId,
         failUrl: currentUrl + '?payment_fail=true'
       }).then(() => {
-        // Successful checkout approval in test/live
+        // 실제 결제창 팝업 승인 완료 시에만 발급
         const license = activateProMembership(state, planId, {
           amount,
           payMethod: payMethod === 'kakaopay' ? '카카오페이' : (payMethod === 'tosspay' ? '토스페이' : '신용/체크카드'),
@@ -100,38 +92,22 @@ export function processCheckout({ planId, payMethod = 'card', customerName = '�
         if (err.code === 'USER_CANCEL') {
           if (onError) onError(new Error('결제를 취소하셨습니다.'));
         } else {
-          console.warn('Toss Payment Notice:', err);
-          // If window popup was blocked or in iframe, provide test approval fallback
-          handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess);
+          console.warn('Toss Payment Error:', err);
+          if (onError) onError(new Error(err.message || '카드 결제 처리 중 오류가 발생했습니다.'));
         }
       });
       return;
     } catch (e) {
-      console.warn('Toss initialization error, falling back:', e);
+      console.warn('Toss initialization error:', e);
+      if (onError) onError(new Error('토스페이먼츠 연동 오류: ' + e.message));
+      return;
     }
   }
 
-  // Fallback if offline
-  handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess);
-}
-
-/**
- * Internal helper for simulated test approval
- */
-function handleSimulatedPaymentSuccess(state, plan, payMethod, onSuccess) {
-  setTimeout(() => {
-    const license = activateProMembership(state, plan.id, {
-      amount: plan.price,
-      payMethod: payMethod === 'kakaopay' ? '카카오페이' : (payMethod === 'tosspay' ? '토스페이' : '신용/체크카드')
-    });
-    if (onSuccess) {
-      onSuccess({
-        license,
-        plan,
-        receiptNo: 'REC-' + Date.now().toString().slice(-6)
-      });
-    }
-  }, 500);
+  // 상점키가 아직 미등록된 경우: 가짜 무료 승인을 하지 않고 PG_NOT_CONFIGURED 에러를 전달
+  if (onError) {
+    onError(new Error('PG_NOT_CONFIGURED'));
+  }
 }
 
 /**

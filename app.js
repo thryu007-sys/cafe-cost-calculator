@@ -1048,12 +1048,22 @@ function setupPricingAndCheckoutHandlers() {
         curBtn.textContent = '이 플랜 선택됨';
       }
 
-      // Update Checkout Button text
+      // Update Checkout Button text & Bank transfer amount
       const planInfo = PRICING_PLANS[plan];
-      if (elements.btnDoCheckout && planInfo) {
-        const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
-        if (btnText) {
-          btnText.textContent = `💳 ${formatKRW(planInfo.price)} 안전 결제하고 PRO 즉시 시작`;
+      if (planInfo) {
+        if (elements.btnDoCheckout) {
+          const btnText = elements.btnDoCheckout.querySelector('.checkout-btn-text');
+          if (btnText) {
+            if (selectedPayMethod === 'transfer') {
+              btnText.textContent = `🏦 ${formatKRW(planInfo.price)} 무통장 입금 신청 완료하기`;
+            } else {
+              btnText.textContent = `💳 ${formatKRW(planInfo.price)} 안전 결제하고 PRO 즉시 시작`;
+            }
+          }
+        }
+        const bankPlanPriceEl = document.getElementById('bank-plan-price-text');
+        if (bankPlanPriceEl) {
+          bankPlanPriceEl.textContent = formatKRW(planInfo.price);
         }
       }
     });
@@ -1140,6 +1150,15 @@ function setupPricingAndCheckoutHandlers() {
         onError: (err) => {
           if (btnText) btnText.textContent = origText;
           elements.btnDoCheckout.disabled = false;
+          if (err && err.message === 'PG_NOT_CONFIGURED') {
+            alert('📢 현재 온라인 카드 결제 심사 준비 중입니다.\n\n[무통장입금 / 계좌이체]를 선택해 주시면 입금 확인 즉시 사장님이 정품 라이선스 키를 문자로 발송해 드립니다!');
+            const transferRadio = document.querySelector('input[name="payMethod"][value="transfer"]');
+            if (transferRadio) {
+              const label = transferRadio.closest('.pay-method-radio');
+              if (label) label.click();
+            }
+            return;
+          }
           alert('결제 처리 중 오류가 발생했습니다: ' + (err.message || '다시 시도해 주세요.'));
         }
       });
