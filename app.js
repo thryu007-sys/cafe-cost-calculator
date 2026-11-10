@@ -678,6 +678,15 @@ function syncFormInputsFromState() {
    EVENT LISTENERS SETUP
    ========================================================================== */
 function setupEventListeners() {
+  // Auto-select all text on input focus for effortless typing
+  document.querySelectorAll('.pos-input').forEach(inp => {
+    inp.addEventListener('focus', (e) => {
+      try {
+        e.target.select();
+      } catch (err) {}
+    });
+  });
+
   // ① Menu Name Input
   if (elements.inputMenuName) {
     elements.inputMenuName.addEventListener('input', (e) => {
@@ -1173,17 +1182,14 @@ function setupPricingAndCheckoutHandlers() {
       const res = restoreProWithLicenseKey(state, key);
       if (res && res.success) {
         if (res.isOwner) {
-          alert('👑 사장님(최고 관리자) 인증이 완료되었습니다!
-관리자 기능 및 모든 PRO 기능이 영구 잠금 해제되었습니다.');
+          alert('👑 사장님(최고 관리자) 인증이 완료되었습니다!\n관리자 기능 및 모든 PRO 기능이 영구 잠금 해제되었습니다.');
         } else {
-          alert('🎉 정품 라이선스가 성공적으로 인증되었습니다!
-모든 PRO 기능이 영구 잠금 해제되었습니다.');
+          alert('🎉 정품 라이선스가 성공적으로 인증되었습니다!\n모든 PRO 기능이 영구 잠금 해제되었습니다.');
         }
         updateCalculationsAndOutputs();
         closeModal(elements.modalSettings);
       } else {
-        alert('❌ 올바르지 않은 정품 라이선스 키입니다.
-구매 시 발급받으신 형식(예: CAFE-PRO-XXXX-XXXX)을 다시 확인해 주세요.');
+        alert('❌ 올바르지 않은 정품 라이선스 키입니다.\n구매 시 발급받으신 형식(예: CAFE-PRO-XXXX-XXXX)을 다시 확인해 주세요.');
       }
     });
   }
@@ -1192,8 +1198,7 @@ function setupPricingAndCheckoutHandlers() {
   if (elements.btnTestCustomerMode) {
     elements.btnTestCustomerMode.addEventListener('click', () => {
       deactivateProForTesting(state);
-      alert('🔄 일반 손님(무료 회원) 모드로 전환되었습니다.
-손님에게 보이는 잠금 화면 및 29,900원 결제창을 직접 테스트해 보세요.');
+      alert('🔄 일반 손님(무료 회원) 모드로 전환되었습니다.\n손님에게 보이는 잠금 화면 및 29,900원 결제창을 직접 테스트해 보세요.');
       updateCalculationsAndOutputs();
       closeModal(elements.modalSettings);
     });

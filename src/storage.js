@@ -34,13 +34,13 @@ export const DEFAULT_CLEAN_STATE = {
   monthlyVolume: 0, // 선택적: 0이면 미배분 (1잔 직접원가 기준)
 
   fixedItems: {
-    rent: 700000,
-    utilities: 70000,
-    services: 50000,
+    rent: 0,
+    utilities: 0,
+    services: 0,
     otherFixed: 0
   },
   laborItems: {
-    salaries: 4000000,
+    salaries: 0,
     insurance: 0,
     otherLabor: 0
   },
@@ -100,13 +100,13 @@ export const STANDARD_TEST_STATE = {
   monthlyVolume: 0,
 
   fixedItems: {
-    rent: 700000,
-    utilities: 70000,
-    services: 50000,
+    rent: 0,
+    utilities: 0,
+    services: 0,
     otherFixed: 0
   },
   laborItems: {
-    salaries: 4000000,
+    salaries: 0,
     insurance: 0,
     otherLabor: 0
   },
@@ -150,12 +150,12 @@ export function loadSavedState() {
     parsed.packPrices.carrier = 5000;
     parsed.packQtys.carrier = 100;
 
-    // Auto-migrate legacy overhead defaults
-    if (!parsed.fixedItems || parsed.fixedItems.rent === 2000000) {
-      parsed.fixedItems = { ...DEFAULT_CLEAN_STATE.fixedItems };
+    // Auto-migrate legacy overhead defaults to clean 0
+    if (!parsed.fixedItems || parsed.fixedItems.rent === 700000 || parsed.fixedItems.rent === 2000000) {
+      parsed.fixedItems = { rent: 0, utilities: 0, services: 0, otherFixed: 0 };
     }
-    if (!parsed.laborItems || parsed.laborItems.salaries === 1200000) {
-      parsed.laborItems = { ...DEFAULT_CLEAN_STATE.laborItems };
+    if (!parsed.laborItems || parsed.laborItems.salaries === 4000000 || parsed.laborItems.salaries === 1200000) {
+      parsed.laborItems = { salaries: 0, insurance: 0, otherLabor: 0 };
     }
 
     if (parsed.monthlyVolume === undefined || parsed.monthlyVolume === null) {
